@@ -1,11 +1,13 @@
 {
-  "name": "lumina-ig",
+  "name": "gmax-hub",
   "private": true,
   "version": "1.0.0",
-  "description": "Instagram-style gated study feed for Vercel",
+  "description": "GMAX Hub \u2014 Instagram-style gated study feed",
   "scripts": {
     "dev": "vercel dev",
     "deploy": "vercel --prod"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }
