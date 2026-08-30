@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>Lumina — Study Feed</title>
+<title>GMAX Hub — Study Feed</title>
 <meta name="theme-color" content="#12081C"/>
 <style>
   :root{
@@ -292,10 +292,10 @@
 <div class="app" id="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">L</div>
+      <div class="logo" id="brandLogo">G</div>
       <div>
-        <h1>Lumina</h1>
-        <p>Study feed · gated classroom</p>
+        <h1 id="brandName">GMAX Hub</h1>
+        <p id="brandTag">Study feed · gated classroom</p>
       </div>
     </div>
     <div class="top-actions">
@@ -326,7 +326,7 @@
         <article class="about-slide">
           <span class="badge">Slide 1 · Mentor</span>
           <h2>Learn with a clear, calm feed</h2>
-          <p>Lumina turns your classroom into an Instagram-style stream — stories for quick tips, posts for deep lessons — without the noise.</p>
+          <p>GMAX Hub turns your classroom into an Instagram-style stream — stories for quick tips, posts for deep lessons — without the noise.</p>
           <div class="about-card">
             <ul>
               <li>Stories for daily micro-lessons</li>
@@ -380,9 +380,19 @@
           </div>
 
           <div class="admin-box" style="margin-top:14px">
+            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">✏️ Site name (top bar)</label>
+            <label>Brand name</label>
+            <input type="text" id="brandNameInput" placeholder="GMAX Hub" maxlength="32"/>
+            <label>Tagline</label>
+            <input type="text" id="brandTagInput" placeholder="Study feed · gated classroom" maxlength="48"/>
+            <button class="btn btn-primary" type="button" id="brandSaveBtn" style="width:100%">Save site name</button>
+            <div class="err" id="brandSaveMsg" style="color:var(--accent)"></div>
+          </div>
+
+          <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Post (link only)</label>
             <label>Username</label>
-            <input type="text" id="apUser" placeholder="lumina.study" value="lumina.study"/>
+            <input type="text" id="apUser" placeholder="gmax.hub" value="gmax.hub"/>
             <label>Title</label>
             <input type="text" id="apTitle" placeholder="Chapter name"/>
             <label>Caption</label>
@@ -437,8 +447,8 @@
 <!-- Unlock sheet -->
 <div class="modal" id="unlockModal">
   <div class="sheet">
-    <h2>Unlock Lumina</h2>
-    <p class="sub">1) Tap <b>Get Key</b> (AroLinks link) → copy 12-digit code<br/>2) Paste below → Verify · valid <b>36 hours</b></p>
+    <h2>Unlock GMAX Hub</h2>
+    <p class="sub">1) Tap <b>Get Key</b> → open short link (ads) → copy 12-digit code<br/>2) Paste below → Verify · valid <b>36 hours</b></p>
     <input id="pwInput" type="text" inputmode="numeric" maxlength="12" placeholder="12-digit code" autocomplete="one-time-code"/>
     <div class="err" id="pwErr"></div>
     <div class="row">
@@ -483,6 +493,8 @@
   ];
 
   const KEY = 'lumina_unlock_until';
+  const BRAND_KEY = 'gmax_site_brand';
+  const ADMIN_FAIL_KEY = 'gmax_admin_fails';
   const DEVICE_KEY = 'lumina_device_id';
   const SEEN_KEY = 'lumina_seen_stories';
   const ADMIN_KEY = 'lumina_admin_until';
@@ -518,6 +530,60 @@
   function allPosts(){
     const c = loadCustom();
     return c.posts.concat(DEFAULT_POSTS);
+  }
+
+  function loadBrand(){
+    try{
+      const raw = JSON.parse(localStorage.getItem(BRAND_KEY)||'{}');
+      return {
+        name: (raw.name && String(raw.name).trim()) || 'GMAX Hub',
+        tag: (raw.tag && String(raw.tag).trim()) || 'Study feed · gated classroom',
+        letter: ((raw.name && String(raw.name).trim()) || 'GMAX Hub')[0].toUpperCase()
+      };
+    }catch(e){
+      return { name:'GMAX Hub', tag:'Study feed · gated classroom', letter:'G' };
+    }
+  }
+  function saveBrand(name, tag){
+    const n = (name||'GMAX Hub').trim().slice(0,32) || 'GMAX Hub';
+    const t = (tag||'').trim().slice(0,48) || 'Study feed · gated classroom';
+    try{ localStorage.setItem(BRAND_KEY, JSON.stringify({ name:n, tag:t })); }catch(e){}
+    applyBrand();
+  }
+  function applyBrand(){
+    const b = loadBrand();
+    const n = document.getElementById('brandName');
+    const t = document.getElementById('brandTag');
+    const l = document.getElementById('brandLogo');
+    if(n) n.textContent = b.name;
+    if(t) t.textContent = b.tag;
+    if(l) l.textContent = b.letter;
+    document.title = b.name + ' — Study Feed';
+    const un = document.getElementById('unlockModal');
+    if(un){
+      const h2 = un.querySelector('h2');
+      if(h2) h2.textContent = 'Unlock ' + b.name;
+    }
+  }
+  function getAdminFailState(){
+    try{
+      const raw = JSON.parse(localStorage.getItem(ADMIN_FAIL_KEY)||'{}');
+      const fails = parseInt(raw.fails||0,10)||0;
+      const lockUntil = parseInt(raw.lockUntil||0,10)||0;
+      if(lockUntil && Date.now() >= lockUntil){
+        localStorage.removeItem(ADMIN_FAIL_KEY);
+        return { fails:0, lockUntil:0 };
+      }
+      return { fails, lockUntil };
+    }catch(e){ return { fails:0, lockUntil:0 }; }
+  }
+  function setAdminFailState(fails, lockUntil){
+    try{
+      localStorage.setItem(ADMIN_FAIL_KEY, JSON.stringify({ fails:fails||0, lockUntil:lockUntil||0 }));
+    }catch(e){}
+  }
+  function clearAdminFailState(){
+    try{ localStorage.removeItem(ADMIN_FAIL_KEY); }catch(e){}
   }
 
   function getDeviceId(){
@@ -594,7 +660,7 @@
     return `<div class="post-media no-save" style="background:${gradient||'linear-gradient(160deg,#5b2d8e,#1a0a2e)'}">
       <div style="position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center">
         <div>
-          <div style="font-size:13px;opacity:.75;margin-bottom:8px">LUMINA POST</div>
+          <div style="font-size:13px;opacity:.75;margin-bottom:8px">GMAX POST</div>
           <div style="font-size:22px;font-weight:800;letter-spacing:-.02em">${(title||'').replace(/</g,'')}</div>
         </div>
       </div>
@@ -652,9 +718,9 @@
         c.textContent = likeBtn.classList.contains('liked') ? n+1 : Math.max(0,n-1);
       });
       el.querySelector('.share').addEventListener('click', async ()=>{
-        const text = `Lumina · ${p.title||''}\n${p.caption||''}\n${location.href}`;
+        const text = `${loadBrand().name} · ${p.title||''}\n${p.caption||''}\n${location.href}`;
         try{
-          if(navigator.share) await navigator.share({ title:'Lumina', text, url: location.href });
+          if(navigator.share) await navigator.share({ title:loadBrand().name, text, url: location.href });
           else { await navigator.clipboard.writeText(text); alert('Link copied'); }
         }catch(e){}
       });
@@ -725,7 +791,7 @@
     renderStories();
     const prog = document.getElementById('viewerProgress');
     prog.innerHTML = STORIES.map((_,idx)=>`<i><b style="width:${idx<storyIndex?100:0}%"></b></i>`).join('');
-    document.getElementById('viewerName').textContent = st.name||'Lumina';
+    document.getElementById('viewerName').textContent = st.name||loadBrand().name;
     document.getElementById('viewerAv').textContent = (st.name||'L')[0];
     let body = `<h3>${st.title||''}</h3><p>${st.body||''}</p>`;
     if(st.media){
@@ -828,15 +894,17 @@
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ deviceId: getDeviceId() })
     })
-      .then(r=>r.json())
-      .then(data=>{
-        const url = data && (data.shortUrl || data.fallbackUrl);
-        if(url) window.location.href = url;
-        else {
-          pwErr.textContent = (data && data.error) || 'Key failed';
-          pwGetKey.disabled = false;
-          pwGetKey.textContent = '🔑 Get Key';
+      .then(r=>r.json().then(d=>({ok:r.ok,d})))
+      .then(({ok,d})=>{
+        // Server only returns shortUrl after AroLinks success — never open /api/reveal directly
+        const url = d && d.shortUrl;
+        if(ok && url && !/\/api\/reveal/i.test(url)){
+          window.location.href = url;
+          return;
         }
+        pwErr.textContent = (d && d.error) || 'Short link failed. Ads link required — key is not given directly.';
+        pwGetKey.disabled = false;
+        pwGetKey.textContent = '🔑 Get Key';
       })
       .catch(()=>{
         pwErr.textContent = 'Connection error';
@@ -859,27 +927,63 @@
       adminLoginBox.style.display='none';
       adminDash.style.display='block';
       renderAdminList();
+      const b = loadBrand();
+      const ni = document.getElementById('brandNameInput');
+      const ti = document.getElementById('brandTagInput');
+      if(ni) ni.value = b.name;
+      if(ti) ti.value = b.tag;
     } else {
       adminLoginBox.style.display='block';
       adminDash.style.display='none';
+      const st = getAdminFailState();
+      if(st.lockUntil && Date.now() < st.lockUntil){
+        const mins = Math.ceil((st.lockUntil - Date.now())/60000);
+        adminErr.textContent = 'Locked. Try again after ~' + mins + ' min.';
+      }
     }
   }
   document.getElementById('adminLoginBtn').onclick = ()=>{
     adminErr.textContent='';
+    const st = getAdminFailState();
+    if(st.lockUntil && Date.now() < st.lockUntil){
+      const mins = Math.ceil((st.lockUntil - Date.now())/60000);
+      adminErr.textContent = 'Locked. Try again after ~' + mins + ' min (2 hours from lock).';
+      return;
+    }
+    const btn = document.getElementById('adminLoginBtn');
+    btn.disabled = true;
     fetch('/api/admin', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ pin: adminPin.value||'' })
+      body: JSON.stringify({ pin: adminPin.value||'', deviceId: getDeviceId() })
     })
       .then(r=>r.json().then(d=>({ok:r.ok,d})))
       .then(({d})=>{
         if(d && d.ok && d.until){
+          clearAdminFailState();
           try{ localStorage.setItem(ADMIN_KEY, String(d.until)); }catch(e){}
           adminPin.value='';
           showAdmin();
-        } else adminErr.textContent = (d && d.error) || 'Login failed';
+        } else {
+          if(d && d.locked && d.lockUntil){
+            setAdminFailState(2, d.lockUntil);
+          } else if(d && d.fails){
+            const lockUntil = d.lockUntil || 0;
+            setAdminFailState(d.fails, lockUntil);
+          }
+          adminErr.textContent = (d && d.error) || 'Login failed';
+        }
       })
-      .catch(()=>{ adminErr.textContent='Network error'; });
+      .catch(()=>{ adminErr.textContent='Network error'; })
+      .finally(()=>{ btn.disabled = false; });
+  };
+
+  document.getElementById('brandSaveBtn').onclick = ()=>{
+    const name = document.getElementById('brandNameInput').value;
+    const tag = document.getElementById('brandTagInput').value;
+    saveBrand(name, tag);
+    const msg = document.getElementById('brandSaveMsg');
+    if(msg){ msg.textContent = 'Saved — top bar updated.'; setTimeout(()=>msg.textContent='', 2500); }
   };
   document.getElementById('adminLogout').onclick = ()=>{
     try{ localStorage.removeItem(ADMIN_KEY);}catch(e){}
@@ -939,6 +1043,7 @@
 
 
   /* init */
+  applyBrand();
   refreshAll();
   applyUnlockState();
   showAdmin();
