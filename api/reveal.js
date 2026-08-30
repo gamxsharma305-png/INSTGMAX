@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 
-function htmlPage(code, ok, msg) {
+function htmlPage(code, ok, msg, brand) {
+  const name = brand || 'GMAX Hub';
   const body = ok
     ? `<div class="code">${code}</div>
        <p class="hint">Copy this 12-digit code and open the main site → Verify.<br/>Access stays valid for 36 hours.</p>
@@ -8,7 +9,7 @@ function htmlPage(code, ok, msg) {
     : `<p class="err">${msg || 'Invalid or expired link'}</p>`;
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Access Code</title>
+<title>${name} · Access Code</title>
 <style>
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
     background:#12081C;color:#f5f0ff;font-family:system-ui,sans-serif;padding:20px}
@@ -18,20 +19,27 @@ function htmlPage(code, ok, msg) {
   .hint{color:#b9a8d4;font-size:13px;line-height:1.55}
   .err{color:#f87171}
   button{margin-top:16px;width:100%;padding:12px;border:0;border-radius:12px;background:#C4A1FF;color:#12081C;font-weight:700;cursor:pointer}
-</style></head><body><div class="card"><h2>Lumina Key</h2>${body}</div></body></html>`;
+</style></head><body><div class="card"><h2>${name} Key</h2>${body}</div></body></html>`;
 }
 
 module.exports = async function handler(req, res) {
   const secret = process.env.KEY_SECRET || process.env.AROLINKS_TOKEN || 'change-me';
+  const brand = process.env.SITE_NAME || 'GMAX Hub';
   const q = req.query || {};
   const code = String(q.c || '');
   const exp = parseInt(q.e || '0', 10);
   const sig = String(q.s || '');
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
-  if (!/^\d{12}$/.test(code) || !exp || !sig) return res.status(400).send(htmlPage('', false, 'Link incomplete.'));
-  if (Date.now() > exp) return res.status(400).send(htmlPage('', false, 'Link expired. Tap Get Key again.'));
+  if (!/^\d{12}$/.test(code) || !exp || !sig) {
+    return res.status(400).send(htmlPage('', false, 'Link incomplete. Open Get Key again from the main site.', brand));
+  }
+  if (Date.now() > exp) {
+    return res.status(400).send(htmlPage('', false, 'Link expired. Tap Get Key again.', brand));
+  }
   const expect = crypto.createHmac('sha256', secret).update(`${code}.${exp}`).digest('hex').slice(0, 24);
-  if (expect !== sig) return res.status(400).send(htmlPage('', false, 'Invalid signature.'));
-  return res.status(200).send(htmlPage(code, true));
+  if (expect !== sig) {
+    return res.status(400).send(htmlPage('', false, 'Invalid signature.', brand));
+  }
+  return res.status(200).send(htmlPage(code, true, '', brand));
 };
