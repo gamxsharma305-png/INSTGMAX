@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>GMAX Hub — Study Feed</title>
+<title>Lumina — Study Feed</title>
 <meta name="theme-color" content="#12081C"/>
 <style>
   :root{
@@ -292,10 +292,10 @@
 <div class="app" id="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo" id="brandLogo">G</div>
+      <div class="logo">L</div>
       <div>
-        <h1 id="brandName">GMAX Hub</h1>
-        <p id="brandTag">Study feed · gated classroom</p>
+        <h1>Lumina</h1>
+        <p>Study feed · gated classroom</p>
       </div>
     </div>
     <div class="top-actions">
@@ -322,44 +322,7 @@
 
     <!-- ABOUT 3 slides -->
     <section class="screen" id="screenAbout">
-      <div class="about-deck">
-        <article class="about-slide">
-          <span class="badge">Slide 1 · Mentor</span>
-          <h2>Learn with a clear, calm feed</h2>
-          <p>GMAX Hub turns your classroom into an Instagram-style stream — stories for quick tips, posts for deep lessons — without the noise.</p>
-          <div class="about-card">
-            <ul>
-              <li>Stories for daily micro-lessons</li>
-              <li>Posts for notes, diagrams &amp; revisions</li>
-              <li>Like &amp; share what helps you most</li>
-            </ul>
-          </div>
-        </article>
-        <article class="about-slide">
-          <span class="badge">Slide 2 · Access</span>
-          <h2>Private until you unlock</h2>
-          <p>Content stays blurred until a valid 12-digit key is verified. Session lasts 36 hours on this device.</p>
-          <div class="about-card">
-            <ul>
-              <li>Get Key → AroLinks secure link</li>
-              <li>Reveal 12-digit code</li>
-              <li>Verify once · study for 36 hours</li>
-            </ul>
-          </div>
-        </article>
-        <article class="about-slide">
-          <span class="badge">Slide 3 · For educators</span>
-          <h2>Built for your client classroom</h2>
-          <p>Glass UI, purple brand system, admin gate on the server — deploy on Vercel and share one link on WhatsApp.</p>
-          <div class="about-card">
-            <ul>
-              <li>Admin PIN only in server env</li>
-              <li>No AroLinks token in the browser</li>
-              <li>Mobile-first Instagram layout</li>
-            </ul>
-          </div>
-        </article>
-      </div>
+      <div class="about-deck" id="aboutDeck"></div>
     </section>
 
     <!-- ADMIN -->
@@ -380,19 +343,9 @@
           </div>
 
           <div class="admin-box" style="margin-top:14px">
-            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">✏️ Site name (top bar)</label>
-            <label>Brand name</label>
-            <input type="text" id="brandNameInput" placeholder="GMAX Hub" maxlength="32"/>
-            <label>Tagline</label>
-            <input type="text" id="brandTagInput" placeholder="Study feed · gated classroom" maxlength="48"/>
-            <button class="btn btn-primary" type="button" id="brandSaveBtn" style="width:100%">Save site name</button>
-            <div class="err" id="brandSaveMsg" style="color:var(--accent)"></div>
-          </div>
-
-          <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Post (link only)</label>
             <label>Username</label>
-            <input type="text" id="apUser" placeholder="gmax.hub" value="gmax.hub"/>
+            <input type="text" id="apUser" placeholder="lumina.study" value="lumina.study"/>
             <label>Title</label>
             <input type="text" id="apTitle" placeholder="Chapter name"/>
             <label>Caption</label>
@@ -418,9 +371,21 @@
           </div>
 
           <div class="admin-box">
-            <label style="font-weight:700;margin-bottom:8px">Manage</label>
+            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">✏️ Edit About (3 slides)</label>
+            <div id="aboutEditor"></div>
+            <button class="btn btn-ghost" type="button" id="aboutApplyLocal" style="width:100%;margin-top:8px">Preview About on this phone</button>
+          </div>
+
+          <div class="admin-box">
+            <label style="font-weight:700;margin-bottom:8px">Manage · shared feed</label>
             <div id="adminList" style="font-size:12.5px;color:var(--muted);max-height:180px;overflow:auto"></div>
-            <button class="btn btn-ghost" type="button" id="adminClearCustom" style="width:100%;margin-top:8px">Clear my added posts/stories</button>
+            <p style="font-size:12px;color:var(--muted);margin:10px 0;line-height:1.45">
+              <b style="color:var(--accent)">Publish to everyone</b> GitHub पर सेव करता है — सभी यूज़र्स को दिखेगा।
+              (Vercel env: GITHUB_TOKEN + GITHUB_REPO ज़रूरी)
+            </p>
+            <button class="btn btn-primary" type="button" id="adminPublishAll" style="width:100%">🌐 Publish to all users</button>
+            <div class="err" id="publishErr" style="margin-top:8px"></div>
+            <button class="btn btn-ghost" type="button" id="adminClearCustom" style="width:100%;margin-top:8px">Clear all custom posts/stories</button>
             <button class="btn btn-ghost" type="button" id="adminLogout" style="margin-top:8px;width:100%">Logout</button>
           </div>
         </div>
@@ -447,8 +412,8 @@
 <!-- Unlock sheet -->
 <div class="modal" id="unlockModal">
   <div class="sheet">
-    <h2>Unlock GMAX Hub</h2>
-    <p class="sub">1) Tap <b>Get Key</b> → open short link (ads) → copy 12-digit code<br/>2) Paste below → Verify · valid <b>36 hours</b></p>
+    <h2>Unlock Lumina</h2>
+    <p class="sub">1) Tap <b>Get Key</b> (AroLinks link) → copy 12-digit code<br/>2) Paste below → Verify · valid <b>36 hours</b></p>
     <input id="pwInput" type="text" inputmode="numeric" maxlength="12" placeholder="12-digit code" autocomplete="one-time-code"/>
     <div class="err" id="pwErr"></div>
     <div class="row">
@@ -477,28 +442,34 @@
 (function(){
   const DEFAULT_STORIES = [
     { id:'s1', name:'Tips', title:'Pomodoro 25+5', body:'Padhai 25 min, break 5 min. 4 rounds ke baad lambi break. Focus badhega.', media:'' },
-    { id:'s2', name:'Math', title:'Formula wall', body:'Quadratic roots: x = (−b ± √(b²−4ac)) / 2a. Roz 5 sawal practice.', media:'' },
-    { id:'s3', name:'Science', title:'NCERT first', body:'Diagrams label karke likho. Board exams mein direct lines aati hain.', media:'' },
-    { id:'s4', name:'English', title:'One para/day', body:'Roz ek paragraph rewrite — vocabulary + grammar dono tight honge.', media:'' },
-    { id:'s5', name:'Mindset', title:'Consistency > intensity', body:'Roz thoda > kabhi-kabhi bahut. Streak banao, burnout mat lo.', media:'' }
+    { id:'s2', name:'Math', title:'Formula wall', body:'Quadratic roots practice. Roz 5 sawal.', media:'' },
+    { id:'s3', name:'Science', title:'NCERT first', body:'Diagrams label karke likho.', media:'' },
+    { id:'s4', name:'English', title:'One para/day', body:'Roz ek paragraph rewrite.', media:'' },
+    { id:'s5', name:'Mindset', title:'Consistency', body:'Roz thoda > kabhi-kabhi bahut.', media:'' }
   ];
 
   const DEFAULT_POSTS = [
-    { id:'p1', user:'lumina.study', place:'Classroom', title:'Week plan', caption:'Is hafte Algebra + Chemical reactions. Stories mein daily tip check karo.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
-    { id:'p2', user:'lumina.study', place:'Notes', title:'Revision sheet', caption:'One-page revision: definitions + 3 example problems. Save & share with batch.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
-    { id:'p3', user:'mentor.aria', place:'Live', title:'Doubt hour', caption:'Aaj 8 PM doubt session. Blurred posts unlock ke baad full resources milenge.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' },
-    { id:'p4', user:'lumina.study', place:'Practice', title:'MCQ set 12', caption:'12 mixed MCQs — timer laga ke attempt karo. Answers story mein.', likes:67, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#2d8e6a,#0a2e1a)' },
-    { id:'p5', user:'lumina.study', place:'Focus', title:'Phone outside', caption:'Study block ke time phone doosre room. Deep work = better recall.', likes:151, time:'2 DAYS AGO', media:'', gradient:'linear-gradient(160deg,#6a2d8e,#1a0a2e)' },
-    { id:'p6', user:'mentor.aria', place:'Mindset', title:'Sleep is a skill', caption:'7 hours sleep > all-nighter. Memory consolidation raat ko hoti hai.', likes:99, time:'3 DAYS AGO', media:'', gradient:'linear-gradient(160deg,#8e6a2d,#2e1a0a)' }
+    { id:'p1', user:'lumina.study', place:'Classroom', title:'Week plan', caption:'Is hafte Algebra + Chemical reactions.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
+    { id:'p2', user:'lumina.study', place:'Notes', title:'Revision sheet', caption:'One-page revision: definitions + 3 examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
+    { id:'p3', user:'mentor.aria', place:'Live', title:'Doubt hour', caption:'Unlock ke baad full resources milenge.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
+  ];
+
+  const DEFAULT_ABOUT = [
+    { badge:'Slide 1 · Mentor', title:'Learn with a clear, calm feed', body:'Lumina turns your classroom into an Instagram-style stream — stories for quick tips, posts for deep lessons.', bullets:['Stories for daily micro-lessons','Posts for notes & revisions','Like & share what helps'] },
+    { badge:'Slide 2 · Access', title:'Private until you unlock', body:'Content stays blurred until a valid 12-digit key is verified. Session lasts 36 hours.', bullets:['Get Key → AroLinks link','Reveal 12-digit code','Verify · study 36 hours'] },
+    { badge:'Slide 3 · For educators', title:'Built for your classroom', body:'Glass UI, purple brand, admin on server — deploy on Vercel and share one link.', bullets:['Admin PIN in server env','Token not in browser','Mobile-first layout'] }
   ];
 
   const KEY = 'lumina_unlock_until';
-  const BRAND_KEY = 'gmax_site_brand';
-  const ADMIN_FAIL_KEY = 'gmax_admin_fails';
   const DEVICE_KEY = 'lumina_device_id';
   const SEEN_KEY = 'lumina_seen_stories';
   const ADMIN_KEY = 'lumina_admin_until';
-  const CONTENT_KEY = 'lumina_custom_content';
+  const ADMIN_PIN_CACHE = 'lumina_admin_pin_session'; // only in memory-ish session for publish
+
+  let sharedPosts = [];
+  let sharedStories = [];
+  let sharedAbout = DEFAULT_ABOUT.map(a => ({...a, bullets: [...(a.bullets||[])]}));
+  let adminPinSession = '';
 
   const feed = document.getElementById('feed');
   const postsEl = document.getElementById('posts');
@@ -511,79 +482,11 @@
   const pwSubmit = document.getElementById('pwSubmit');
   const pwGetKey = document.getElementById('pwGetKeyBtn');
 
-  function loadCustom(){
-    try{
-      const raw = JSON.parse(localStorage.getItem(CONTENT_KEY)||'{}');
-      return {
-        posts: Array.isArray(raw.posts) ? raw.posts : [],
-        stories: Array.isArray(raw.stories) ? raw.stories : []
-      };
-    }catch(e){ return { posts:[], stories:[] }; }
-  }
-  function saveCustom(data){
-    try{ localStorage.setItem(CONTENT_KEY, JSON.stringify(data)); }catch(e){}
-  }
   function allStories(){
-    const c = loadCustom();
-    return c.stories.concat(DEFAULT_STORIES);
+    return (sharedStories && sharedStories.length) ? sharedStories : DEFAULT_STORIES;
   }
   function allPosts(){
-    const c = loadCustom();
-    return c.posts.concat(DEFAULT_POSTS);
-  }
-
-  function loadBrand(){
-    try{
-      const raw = JSON.parse(localStorage.getItem(BRAND_KEY)||'{}');
-      return {
-        name: (raw.name && String(raw.name).trim()) || 'GMAX Hub',
-        tag: (raw.tag && String(raw.tag).trim()) || 'Study feed · gated classroom',
-        letter: ((raw.name && String(raw.name).trim()) || 'GMAX Hub')[0].toUpperCase()
-      };
-    }catch(e){
-      return { name:'GMAX Hub', tag:'Study feed · gated classroom', letter:'G' };
-    }
-  }
-  function saveBrand(name, tag){
-    const n = (name||'GMAX Hub').trim().slice(0,32) || 'GMAX Hub';
-    const t = (tag||'').trim().slice(0,48) || 'Study feed · gated classroom';
-    try{ localStorage.setItem(BRAND_KEY, JSON.stringify({ name:n, tag:t })); }catch(e){}
-    applyBrand();
-  }
-  function applyBrand(){
-    const b = loadBrand();
-    const n = document.getElementById('brandName');
-    const t = document.getElementById('brandTag');
-    const l = document.getElementById('brandLogo');
-    if(n) n.textContent = b.name;
-    if(t) t.textContent = b.tag;
-    if(l) l.textContent = b.letter;
-    document.title = b.name + ' — Study Feed';
-    const un = document.getElementById('unlockModal');
-    if(un){
-      const h2 = un.querySelector('h2');
-      if(h2) h2.textContent = 'Unlock ' + b.name;
-    }
-  }
-  function getAdminFailState(){
-    try{
-      const raw = JSON.parse(localStorage.getItem(ADMIN_FAIL_KEY)||'{}');
-      const fails = parseInt(raw.fails||0,10)||0;
-      const lockUntil = parseInt(raw.lockUntil||0,10)||0;
-      if(lockUntil && Date.now() >= lockUntil){
-        localStorage.removeItem(ADMIN_FAIL_KEY);
-        return { fails:0, lockUntil:0 };
-      }
-      return { fails, lockUntil };
-    }catch(e){ return { fails:0, lockUntil:0 }; }
-  }
-  function setAdminFailState(fails, lockUntil){
-    try{
-      localStorage.setItem(ADMIN_FAIL_KEY, JSON.stringify({ fails:fails||0, lockUntil:lockUntil||0 }));
-    }catch(e){}
-  }
-  function clearAdminFailState(){
-    try{ localStorage.removeItem(ADMIN_FAIL_KEY); }catch(e){}
+    return (sharedPosts && sharedPosts.length) ? sharedPosts : DEFAULT_POSTS;
   }
 
   function getDeviceId(){
@@ -632,9 +535,7 @@
       };
       step();
       tick=setInterval(step,1000);
-    } else {
-      timerChip.classList.remove('show');
-    }
+    } else timerChip.classList.remove('show');
   }
 
   function getSeen(){
@@ -660,11 +561,55 @@
     return `<div class="post-media no-save" style="background:${gradient||'linear-gradient(160deg,#5b2d8e,#1a0a2e)'}">
       <div style="position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center">
         <div>
-          <div style="font-size:13px;opacity:.75;margin-bottom:8px">GMAX POST</div>
-          <div style="font-size:22px;font-weight:800;letter-spacing:-.02em">${(title||'').replace(/</g,'')}</div>
+          <div style="font-size:13px;opacity:.75;margin-bottom:8px">LUMINA POST</div>
+          <div style="font-size:22px;font-weight:800">${(title||'').replace(/</g,'')}</div>
         </div>
       </div>
     </div>`;
+  }
+
+  function renderAbout(){
+    const deck = document.getElementById('aboutDeck');
+    if(!deck) return;
+    const slides = sharedAbout && sharedAbout.length ? sharedAbout : DEFAULT_ABOUT;
+    deck.innerHTML = slides.map(s => {
+      const bullets = (s.bullets || []).map(b => `<li>${String(b).replace(/</g,'')}</li>`).join('');
+      return `<article class="about-slide">
+        <span class="badge">${(s.badge||'').replace(/</g,'')}</span>
+        <h2>${(s.title||'').replace(/</g,'')}</h2>
+        <p>${(s.body||'').replace(/</g,'')}</p>
+        <div class="about-card"><ul>${bullets}</ul></div>
+      </article>`;
+    }).join('');
+  }
+
+  function renderAboutEditor(){
+    const box = document.getElementById('aboutEditor');
+    if(!box) return;
+    const slides = sharedAbout && sharedAbout.length ? sharedAbout : DEFAULT_ABOUT;
+    box.innerHTML = slides.map((s, i) => `
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px">
+        <label>Slide ${i+1} badge</label>
+        <input type="text" data-ab="badge" data-i="${i}" value="${(s.badge||'').replace(/"/g,'&quot;')}"/>
+        <label>Title</label>
+        <input type="text" data-ab="title" data-i="${i}" value="${(s.title||'').replace(/"/g,'&quot;')}"/>
+        <label>Body</label>
+        <textarea data-ab="body" data-i="${i}">${(s.body||'').replace(/</g,'&lt;')}</textarea>
+        <label>Bullets (one per line)</label>
+        <textarea data-ab="bullets" data-i="${i}">${(s.bullets||[]).join('\n')}</textarea>
+      </div>`).join('');
+  }
+
+  function readAboutFromEditor(){
+    const slides = [0,1,2].map(i => {
+      const badge = (document.querySelector(`[data-ab="badge"][data-i="${i}"]`)||{}).value || '';
+      const title = (document.querySelector(`[data-ab="title"][data-i="${i}"]`)||{}).value || '';
+      const body = (document.querySelector(`[data-ab="body"][data-i="${i}"]`)||{}).value || '';
+      const bulletsRaw = (document.querySelector(`[data-ab="bullets"][data-i="${i}"]`)||{}).value || '';
+      const bullets = bulletsRaw.split('\n').map(x=>x.trim()).filter(Boolean);
+      return { badge, title, body, bullets };
+    });
+    return slides;
   }
 
   function renderStories(){
@@ -703,8 +648,7 @@
         ${mediaBlock(p.media, p.gradient, p.title)}
         <div class="post-actions">
           <button class="act like" type="button" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-8.5C.5 9 2.5 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5c4 0 6 4 4 7.5C19 16.4 12 21 12 21z"/></svg></button>
-          <button class="act" type="button" aria-label="Comment"><svg viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-8.5 8.5H5l-3 3V12A8.5 8.5 0 1 1 21 12z"/></svg></button>
-          <button class="act share" type="button" aria-label="Share"><svg viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/></svg></button>
+          <button class="act share" type="button" aria-label="Share" style="margin-left:auto"><svg viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/></svg></button>
         </div>
         <div class="likes"><span class="like-count">${p.likes||0}</span> likes</div>
         <div class="caption"><strong>${p.user||''}</strong> ${p.caption||''}</div>
@@ -718,15 +662,14 @@
         c.textContent = likeBtn.classList.contains('liked') ? n+1 : Math.max(0,n-1);
       });
       el.querySelector('.share').addEventListener('click', async ()=>{
-        const text = `${loadBrand().name} · ${p.title||''}\n${p.caption||''}\n${location.href}`;
+        const text = `Lumina · ${p.title||''}\n${p.caption||''}\n${location.href}`;
         try{
-          if(navigator.share) await navigator.share({ title:loadBrand().name, text, url: location.href });
+          if(navigator.share) await navigator.share({ title:'Lumina', text, url: location.href });
           else { await navigator.clipboard.writeText(text); alert('Link copied'); }
         }catch(e){}
       });
       postsEl.appendChild(el);
     });
-    // block long-press / context menu on media
     document.querySelectorAll('.post-media, .post-media img, .post-media video').forEach(node=>{
       node.addEventListener('contextmenu', e=> e.preventDefault());
       node.addEventListener('dragstart', e=> e.preventDefault());
@@ -736,18 +679,19 @@
   function renderAdminList(){
     const box = document.getElementById('adminList');
     if(!box) return;
-    const c = loadCustom();
-    if(!c.posts.length && !c.stories.length){
-      box.innerHTML = '<em>No custom posts/stories yet. Add via links above.</em>';
+    const posts = sharedPosts || [];
+    const stories = sharedStories || [];
+    if(!posts.length && !stories.length){
+      box.innerHTML = '<em>No shared posts/stories yet. Add below, then Publish to all users.</em>';
       return;
     }
     let h = '';
-    c.stories.forEach(s=>{
+    stories.forEach(s=>{
       h += `<div style="margin:6px 0;display:flex;justify-content:space-between;gap:8px">
         <span>📖 ${s.name} — ${s.title}</span>
         <button type="button" data-del-story="${s.id}" style="color:#f87171;background:none;border:0;cursor:pointer">del</button></div>`;
     });
-    c.posts.forEach(p=>{
+    posts.forEach(p=>{
       h += `<div style="margin:6px 0;display:flex;justify-content:space-between;gap:8px">
         <span>🖼 ${p.title}</span>
         <button type="button" data-del-post="${p.id}" style="color:#f87171;background:none;border:0;cursor:pointer">del</button></div>`;
@@ -755,16 +699,14 @@
     box.innerHTML = h;
     box.querySelectorAll('[data-del-story]').forEach(btn=>{
       btn.onclick = ()=>{
-        const c2 = loadCustom();
-        c2.stories = c2.stories.filter(s=>s.id !== btn.getAttribute('data-del-story'));
-        saveCustom(c2); refreshAll();
+        sharedStories = sharedStories.filter(s=>s.id !== btn.getAttribute('data-del-story'));
+        refreshAll();
       };
     });
     box.querySelectorAll('[data-del-post]').forEach(btn=>{
       btn.onclick = ()=>{
-        const c2 = loadCustom();
-        c2.posts = c2.posts.filter(p=>p.id !== btn.getAttribute('data-del-post'));
-        saveCustom(c2); refreshAll();
+        sharedPosts = sharedPosts.filter(p=>p.id !== btn.getAttribute('data-del-post'));
+        refreshAll();
       };
     });
   }
@@ -772,7 +714,22 @@
   function refreshAll(){
     renderStories();
     renderPosts();
+    renderAbout();
     renderAdminList();
+    renderAboutEditor();
+  }
+
+  async function loadSharedContent(){
+    try{
+      const r = await fetch('/api/content?t=' + Date.now(), { cache:'no-store' });
+      const d = await r.json();
+      if(d && d.ok && d.content){
+        if(Array.isArray(d.content.posts)) sharedPosts = d.content.posts;
+        if(Array.isArray(d.content.stories)) sharedStories = d.content.stories;
+        if(Array.isArray(d.content.about) && d.content.about.length) sharedAbout = d.content.about;
+      }
+    }catch(e){ console.warn('content load', e); }
+    refreshAll();
   }
 
   /* Story viewer */
@@ -791,7 +748,7 @@
     renderStories();
     const prog = document.getElementById('viewerProgress');
     prog.innerHTML = STORIES.map((_,idx)=>`<i><b style="width:${idx<storyIndex?100:0}%"></b></i>`).join('');
-    document.getElementById('viewerName').textContent = st.name||loadBrand().name;
+    document.getElementById('viewerName').textContent = st.name||'Lumina';
     document.getElementById('viewerAv').textContent = (st.name||'L')[0];
     let body = `<h3>${st.title||''}</h3><p>${st.body||''}</p>`;
     if(st.media){
@@ -799,19 +756,12 @@
         <img src="${String(st.media).replace(/"/g,'')}" alt="" draggable="false" style="width:100%;max-height:240px;object-fit:cover"/></div>` + body;
     }
     document.getElementById('viewerCard').innerHTML = body;
-    document.querySelectorAll('#viewerCard img').forEach(img=>{
-      img.addEventListener('contextmenu', e=>e.preventDefault());
-      img.addEventListener('dragstart', e=>e.preventDefault());
-    });
     if(storyTimer) clearTimeout(storyTimer);
     const bar = prog.children[storyIndex] && prog.children[storyIndex].querySelector('b');
     if(bar){
       bar.style.transition = 'none';
       bar.style.width = '0%';
-      requestAnimationFrame(()=>{
-        bar.style.transition = 'width 4s linear';
-        bar.style.width = '100%';
-      });
+      requestAnimationFrame(()=>{ bar.style.transition = 'width 4s linear'; bar.style.width = '100%'; });
     }
     storyTimer = setTimeout(()=>{
       storyIndex++;
@@ -845,7 +795,7 @@
     });
   });
 
-  /* Unlock modal */
+  /* Unlock */
   function openUnlock(){ modal.classList.add('show'); pwInput.focus(); }
   function closeUnlock(){ modal.classList.remove('show'); }
   document.getElementById('btnOpenUnlock').onclick = openUnlock;
@@ -867,19 +817,27 @@
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ code: val, deviceId: getDeviceId() })
     })
-      .then(r=>r.json().then(d=>({ok:r.ok,d})))
-      .then(({d})=>{
-        if(d && d.ok && d.until){
+      .then(async r=>{
+        const text = await r.text();
+        let d = null;
+        try { d = JSON.parse(text); } catch(e) {}
+        if(!r.ok || !d){
+          pwErr.textContent = r.status === 404
+            ? 'API missing (404). api/ folder upload karke Redeploy karein.'
+            : ('Server error ' + r.status);
+          return;
+        }
+        if(d.ok && d.until){
           setUntil(d.until);
           applyUnlockState();
           closeUnlock();
           pwInput.value='';
         } else {
-          pwErr.textContent = (d && d.error) || 'Invalid code';
+          pwErr.textContent = d.error || 'Invalid code';
           pwInput.value='';
         }
       })
-      .catch(()=>{ pwErr.textContent = 'Network error'; })
+      .catch(err=>{ pwErr.textContent = 'Network error: ' + (err.message||''); })
       .finally(()=>{ pwSubmit.disabled=false; pwSubmit.textContent='Verify'; });
   }
   pwSubmit.onclick = tryVerify;
@@ -894,17 +852,15 @@
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ deviceId: getDeviceId() })
     })
-      .then(r=>r.json().then(d=>({ok:r.ok,d})))
-      .then(({ok,d})=>{
-        // Server only returns shortUrl after AroLinks success — never open /api/reveal directly
-        const url = d && d.shortUrl;
-        if(ok && url && !/\/api\/reveal/i.test(url)){
-          window.location.href = url;
-          return;
+      .then(r=>r.json())
+      .then(data=>{
+        const url = data && (data.shortUrl || data.fallbackUrl);
+        if(url) window.location.href = url;
+        else {
+          pwErr.textContent = (data && data.error) || 'Key failed';
+          pwGetKey.disabled = false;
+          pwGetKey.textContent = '🔑 Get Key';
         }
-        pwErr.textContent = (d && d.error) || 'Short link failed. Ads link required — key is not given directly.';
-        pwGetKey.disabled = false;
-        pwGetKey.textContent = '🔑 Get Key';
       })
       .catch(()=>{
         pwErr.textContent = 'Connection error';
@@ -927,66 +883,42 @@
       adminLoginBox.style.display='none';
       adminDash.style.display='block';
       renderAdminList();
-      const b = loadBrand();
-      const ni = document.getElementById('brandNameInput');
-      const ti = document.getElementById('brandTagInput');
-      if(ni) ni.value = b.name;
-      if(ti) ti.value = b.tag;
+      renderAboutEditor();
     } else {
       adminLoginBox.style.display='block';
       adminDash.style.display='none';
-      const st = getAdminFailState();
-      if(st.lockUntil && Date.now() < st.lockUntil){
-        const mins = Math.ceil((st.lockUntil - Date.now())/60000);
-        adminErr.textContent = 'Locked. Try again after ~' + mins + ' min.';
-      }
     }
   }
   document.getElementById('adminLoginBtn').onclick = ()=>{
     adminErr.textContent='';
-    const st = getAdminFailState();
-    if(st.lockUntil && Date.now() < st.lockUntil){
-      const mins = Math.ceil((st.lockUntil - Date.now())/60000);
-      adminErr.textContent = 'Locked. Try again after ~' + mins + ' min (2 hours from lock).';
-      return;
-    }
-    const btn = document.getElementById('adminLoginBtn');
-    btn.disabled = true;
+    const pinVal = adminPin.value||'';
     fetch('/api/admin', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ pin: adminPin.value||'', deviceId: getDeviceId() })
+      body: JSON.stringify({ pin: pinVal })
     })
-      .then(r=>r.json().then(d=>({ok:r.ok,d})))
-      .then(({d})=>{
-        if(d && d.ok && d.until){
-          clearAdminFailState();
+      .then(async r=>{
+        const text = await r.text();
+        let d = null;
+        try { d = JSON.parse(text); } catch(e) {}
+        if(!r.ok || !d){
+          adminErr.textContent = r.status === 404
+            ? 'API missing (404). api/admin.js deploy karein.'
+            : ('Server error ' + r.status);
+          return;
+        }
+        if(d.ok && d.until){
           try{ localStorage.setItem(ADMIN_KEY, String(d.until)); }catch(e){}
+          adminPinSession = pinVal; // keep for Publish (same session)
           adminPin.value='';
           showAdmin();
-        } else {
-          if(d && d.locked && d.lockUntil){
-            setAdminFailState(2, d.lockUntil);
-          } else if(d && d.fails){
-            const lockUntil = d.lockUntil || 0;
-            setAdminFailState(d.fails, lockUntil);
-          }
-          adminErr.textContent = (d && d.error) || 'Login failed';
-        }
+        } else adminErr.textContent = d.error || 'Login failed';
       })
-      .catch(()=>{ adminErr.textContent='Network error'; })
-      .finally(()=>{ btn.disabled = false; });
-  };
-
-  document.getElementById('brandSaveBtn').onclick = ()=>{
-    const name = document.getElementById('brandNameInput').value;
-    const tag = document.getElementById('brandTagInput').value;
-    saveBrand(name, tag);
-    const msg = document.getElementById('brandSaveMsg');
-    if(msg){ msg.textContent = 'Saved — top bar updated.'; setTimeout(()=>msg.textContent='', 2500); }
+      .catch(err=>{ adminErr.textContent = 'Network error: ' + (err.message||''); });
   };
   document.getElementById('adminLogout').onclick = ()=>{
     try{ localStorage.removeItem(ADMIN_KEY);}catch(e){}
+    adminPinSession = '';
     showAdmin();
   };
 
@@ -996,21 +928,18 @@
     const caption = (document.getElementById('apCaption').value||'').trim();
     const media = (document.getElementById('apMedia').value||'').trim();
     const place = (document.getElementById('apPlace').value||'').trim();
-    if(!title && !caption && !media){ alert('Title, caption ya media link mein se kuch bharo'); return; }
-    if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start hona chahiye'); return; }
-    const c = loadCustom();
-    c.posts.unshift({
-      id: 'c'+Date.now(),
-      user, place: place||'Feed', title: title||'Post', caption,
-      media, likes: 0, time: 'JUST NOW',
-      gradient: 'linear-gradient(160deg,#5b2d8e,#1a0a2e)'
+    if(!title && !caption && !media){ alert('Title, caption ya media link bharo'); return; }
+    if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start ho'); return; }
+    if(!sharedPosts) sharedPosts = [];
+    sharedPosts.unshift({
+      id: 'c'+Date.now(), user, place: place||'Feed', title: title||'Post', caption,
+      media, likes: 0, time: 'JUST NOW', gradient: 'linear-gradient(160deg,#5b2d8e,#1a0a2e)'
     });
-    saveCustom(c);
     document.getElementById('apTitle').value='';
     document.getElementById('apCaption').value='';
     document.getElementById('apMedia').value='';
     refreshAll();
-    alert('Post published (is device par). Har student ko dikhane ke liye baad mein shared DB lagana hoga.');
+    alert('Post draft ready. Ab "Publish to all users" dabao taaki sabko dikhe.');
   };
 
   document.getElementById('asAdd').onclick = ()=>{
@@ -1019,31 +948,74 @@
     const body = (document.getElementById('asBody').value||'').trim();
     const media = (document.getElementById('asMedia').value||'').trim();
     if(!title && !body){ alert('Title ya body bharo'); return; }
-    if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start hona chahiye'); return; }
-    const c = loadCustom();
-    c.stories.unshift({ id:'cs'+Date.now(), name, title, body, media });
-    saveCustom(c);
+    if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start ho'); return; }
+    if(!sharedStories) sharedStories = [];
+    sharedStories.unshift({ id:'cs'+Date.now(), name, title, body, media });
     document.getElementById('asTitle').value='';
     document.getElementById('asBody').value='';
     document.getElementById('asMedia').value='';
     refreshAll();
-    alert('Story published (is device par).');
+    alert('Story draft ready. "Publish to all users" dabao.');
+  };
+
+  document.getElementById('aboutApplyLocal').onclick = ()=>{
+    sharedAbout = readAboutFromEditor();
+    renderAbout();
+    alert('About updated on screen. Publish to all users se sabko milega.');
   };
 
   document.getElementById('adminClearCustom').onclick = ()=>{
-    if(!confirm('Sari custom posts/stories delete?')) return;
-    saveCustom({ posts:[], stories:[] });
+    if(!confirm('Sari custom posts/stories hataein? (Publish ke baad sab devices se)')) return;
+    sharedPosts = [];
+    sharedStories = [];
     refreshAll();
   };
 
-  // Global: block long-press save
+  document.getElementById('adminPublishAll').onclick = ()=>{
+    const err = document.getElementById('publishErr');
+    err.textContent = '';
+    if(!adminPinSession){
+      // ask pin again for publish
+      const pin = prompt('Publish ke liye Admin PIN dubara enter karein:');
+      if(!pin){ err.textContent = 'PIN required'; return; }
+      adminPinSession = pin;
+    }
+    sharedAbout = readAboutFromEditor();
+    const btn = document.getElementById('adminPublishAll');
+    btn.disabled = true;
+    btn.textContent = 'Publishing…';
+    fetch('/api/content', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        pin: adminPinSession,
+        posts: sharedPosts || [],
+        stories: sharedStories || [],
+        about: sharedAbout
+      })
+    })
+      .then(async r=>{
+        const text = await r.text();
+        let d = null;
+        try { d = JSON.parse(text); } catch(e) {}
+        if(!r.ok || !d || !d.ok){
+          err.textContent = (d && d.error) || ('Publish failed ' + r.status);
+          if(r.status === 401) adminPinSession = '';
+          return;
+        }
+        err.style.color = '#86efac';
+        err.textContent = 'Published! Sab users refresh karke dekh sakte hain.';
+        setTimeout(()=>{ err.style.color=''; err.textContent=''; }, 4000);
+      })
+      .catch(e=>{ err.textContent = 'Network: ' + (e.message||''); })
+      .finally(()=>{ btn.disabled=false; btn.textContent='🌐 Publish to all users'; });
+  };
+
   document.addEventListener('contextmenu', function(e){
     if(e.target.closest('.post-media, .no-save, .viewer-body')) e.preventDefault();
   }, {capture:true});
 
-
   /* init */
-  applyBrand();
   refreshAll();
   applyUnlockState();
   showAdmin();
