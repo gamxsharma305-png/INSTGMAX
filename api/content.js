@@ -1,10 +1,15 @@
 /**
- * Shared content for all users.
- * Stores JSON in GitHub content.json via Contents API.
+ * Permanent shared content store — Upstash Redis REST
+ * (no GitHub commits; survives refresh for all users)
  *
- * Env: GITHUB_TOKEN, GITHUB_REPO (owner/name), GITHUB_BRANCH (optional), ADMIN_PIN
+ * Env (required):
+ *   UPSTASH_REDIS_REST_URL
+ *   UPSTASH_REDIS_REST_TOKEN
+ *   ADMIN_PIN
  */
 const crypto = require('crypto');
+
+const KEY = 'lumina:content:v1';
 
 const DEFAULT = {
   posts: [],
@@ -58,92 +63,58 @@ function checkAdmin(body) {
   return hashPin(pin) === hashPin(adminPin);
 }
 
-function repoParts() {
-  const repo = String(process.env.GITHUB_REPO || '').trim();
-  const parts = repo.split('/').filter(Boolean);
-  return {
-    owner: parts[0] || '',
-    name: parts[1] || '',
-    branch: String(process.env.GITHUB_BRANCH || 'main').trim() || 'main'
-  };
+function redisEnv() {
+  const url = String(process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
+  const token = String(process.env.UPSTASH_REDIS_REST_TOKEN || '');
+  return { url, token };
 }
 
-function b64encode(str) {
-  return Buffer.from(String(str), 'utf8').toString('base64');
-}
-
-function b64decode(str) {
-  return Buffer.from(String(str), 'base64').toString('utf8');
-}
-
-async function githubGetFile() {
-  const token = process.env.GITHUB_TOKEN;
-  const { owner, name, branch } = repoParts();
-  if (!token || !owner || !name) return { missing: true, reason: 'no_env' };
-
-  const url =
-    'https://api.github.com/repos/' +
-    owner +
-    '/' +
-    name +
-    '/contents/content.json?ref=' +
-    encodeURIComponent(branch);
-
-  const r = await fetch(url, {
-    headers: {
-      Authorization: 'Bearer ' + token,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'lumina-gmax-content'
-    }
+async function redisGet() {
+  const { url, token } = redisEnv();
+  if (!url || !token) {
+    return { error: 'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN missing in Vercel env' };
+  }
+  const r = await fetch(url + '/get/' + encodeURIComponent(KEY), {
+    headers: { Authorization: 'Bearer ' + token }
   });
-
-  if (r.status === 404) return { missing: true, reason: 'file_404' };
+  const j = await r.json().catch(() => ({}));
   if (!r.ok) {
-    const t = await r.text();
-    return { error: 'GitHub read ' + r.status + ': ' + t.slice(0, 180) };
+    return { error: 'Redis GET ' + r.status + ': ' + JSON.stringify(j).slice(0, 200) };
   }
-  const data = await r.json();
-  let parsed = { ...DEFAULT };
+  // Upstash returns { result: "<json string>" | null }
+  if (j.result == null || j.result === '') {
+    return { data: null };
+  }
   try {
-    parsed = JSON.parse(b64decode(data.content || ''));
-  } catch (_) {}
-  return { sha: data.sha, data: parsed };
+    const parsed = typeof j.result === 'string' ? JSON.parse(j.result) : j.result;
+    return { data: parsed };
+  } catch (e) {
+    return { error: 'Redis value parse failed' };
+  }
 }
 
-async function githubPutFile(contentObj, sha) {
-  const token = process.env.GITHUB_TOKEN;
-  const { owner, name, branch } = repoParts();
-  if (!token || !owner || !name) {
-    throw new Error('GITHUB_TOKEN or GITHUB_REPO missing in Vercel Environment Variables');
+async function redisSet(obj) {
+  const { url, token } = redisEnv();
+  if (!url || !token) {
+    throw new Error('UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN missing in Vercel env');
   }
-
-  const body = {
-    message: 'Lumina content update',
-    content: b64encode(JSON.stringify(contentObj, null, 2)),
-    branch
-  };
-  if (sha) body.sha = sha;
-
-  const url = 'https://api.github.com/repos/' + owner + '/' + name + '/contents/content.json';
-  const r = await fetch(url, {
-    method: 'PUT',
+  // Upstash REST: POST /set/key  body = value as raw string
+  const r = await fetch(url + '/set/' + encodeURIComponent(KEY), {
+    method: 'POST',
     headers: {
       Authorization: 'Bearer ' + token,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'lumina-gmax-content',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(JSON.stringify(obj))
   });
-
+  const j = await r.json().catch(() => ({}));
   if (!r.ok) {
-    const t = await r.text();
-    throw new Error('GitHub write ' + r.status + ': ' + t.slice(0, 250));
+    throw new Error('Redis SET ' + r.status + ': ' + JSON.stringify(j).slice(0, 250));
   }
-  return r.json();
+  return j;
 }
 
-function normalizeContent(c) {
+function normalize(c) {
   c = c || {};
   return {
     posts: Array.isArray(c.posts) ? c.posts : [],
@@ -173,27 +144,19 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
-      try {
-        const file = await githubGetFile();
-        if (file.error) {
-          return send(res, 200, { ok: true, content: DEFAULT, source: 'default', warn: file.error });
-        }
-        if (file.missing) {
-          return send(res, 200, { ok: true, content: DEFAULT, source: 'default' });
-        }
-        return send(res, 200, {
-          ok: true,
-          content: normalizeContent(file.data),
-          source: 'github'
-        });
-      } catch (e) {
-        return send(res, 200, {
-          ok: true,
-          content: DEFAULT,
-          source: 'default',
-          warn: String(e && e.message ? e.message : e)
-        });
+      const got = await redisGet();
+      if (got.error) {
+        // still return default so site loads; warn for admin
+        return send(res, 200, { ok: true, content: DEFAULT, source: 'default', warn: got.error });
       }
+      if (!got.data) {
+        return send(res, 200, { ok: true, content: DEFAULT, source: 'empty' });
+      }
+      return send(res, 200, {
+        ok: true,
+        content: normalize(got.data),
+        source: 'upstash'
+      });
     }
 
     if (req.method === 'POST') {
@@ -211,15 +174,16 @@ module.exports = async function handler(req, res) {
         return send(res, 401, { ok: false, error: 'Admin PIN required / wrong PIN' });
       }
 
-      if (!process.env.GITHUB_TOKEN || !process.env.GITHUB_REPO) {
+      const { url, token } = redisEnv();
+      if (!url || !token) {
         return send(res, 500, {
           ok: false,
           error:
-            'GITHUB_TOKEN या GITHUB_REPO Vercel env में नहीं है। Settings → Environment Variables में दोनों जोड़ो।'
+            'Permanent store not configured. Vercel env में UPSTASH_REDIS_REST_URL और UPSTASH_REDIS_REST_TOKEN जोड़ो (Upstash free).'
         });
       }
 
-      const contentObj = normalizeContent({
+      const contentObj = normalize({
         posts: body.posts,
         stories: body.stories,
         about: body.about,
@@ -228,15 +192,8 @@ module.exports = async function handler(req, res) {
       });
       contentObj.updatedAt = new Date().toISOString();
 
-      let sha = null;
-      const existing = await githubGetFile();
-      if (existing && existing.sha) sha = existing.sha;
-      if (existing && existing.error) {
-        return send(res, 500, { ok: false, error: existing.error });
-      }
-
       try {
-        await githubPutFile(contentObj, sha);
+        await redisSet(contentObj);
       } catch (e) {
         return send(res, 500, {
           ok: false,
@@ -244,12 +201,26 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      return send(res, 200, { ok: true, content: contentObj });
+      // read-back confirm
+      const confirm = await redisGet();
+      const saved = confirm.data ? normalize(confirm.data) : contentObj;
+
+      return send(res, 200, {
+        ok: true,
+        content: saved,
+        source: 'upstash',
+        counts: {
+          posts: (saved.posts || []).length,
+          stories: (saved.stories || []).length
+        }
+      });
     }
 
     return send(res, 405, { error: 'GET or POST only' });
   } catch (e) {
-    return send(res, 500, { ok: false, error: 'Server: ' + String(e && e.message ? e.message : e) });
+    return send(res, 500, {
+      ok: false,
+      error: 'Server: ' + String(e && e.message ? e.message : e)
+    });
   }
 };
-
