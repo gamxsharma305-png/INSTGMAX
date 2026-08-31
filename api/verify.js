@@ -16,6 +16,12 @@ function makeCode(deviceId, secret, bucket) {
   return out.slice(0, 12);
 }
 
+function signUnlock(deviceId, until, secret) {
+  const payload = `${getDeviceSafe(deviceId)}.${until}`;
+  const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex').slice(0, 32);
+  return Buffer.from(payload + '.' + sig).toString('base64url');
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -26,7 +32,11 @@ module.exports = async function handler(req, res) {
   const secret = process.env.KEY_SECRET || process.env.AROLINKS_TOKEN || 'change-me';
   let body = req.body;
   if (typeof body === 'string') {
-    try { body = JSON.parse(body); } catch (_) { body = {}; }
+    try {
+      body = JSON.parse(body);
+    } catch (_) {
+      body = {};
+    }
   }
   body = body || {};
   const code = String(body.code || '').replace(/\s+/g, '');
@@ -39,5 +49,8 @@ module.exports = async function handler(req, res) {
     code === makeCode(deviceId, secret, bucket - 1);
 
   if (!valid) return res.status(401).json({ ok: false, error: 'Invalid code for this device' });
-  return res.status(200).json({ ok: true, until: Date.now() + 36 * 60 * 60 * 1000 });
+
+  const until = Date.now() + 36 * 60 * 60 * 1000;
+  const unlockToken = signUnlock(deviceId, until, secret);
+  return res.status(200).json({ ok: true, until, unlockToken });
 };
