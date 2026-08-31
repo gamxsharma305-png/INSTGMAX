@@ -22,6 +22,28 @@ function signUnlock(deviceId, until, secret) {
   return Buffer.from(payload + '.' + sig).toString('base64url');
 }
 
+function redisEnv() {
+  const url = String(process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
+  const token = String(process.env.UPSTASH_REDIS_REST_TOKEN || '');
+  return { url, token };
+}
+
+async function redisSetSession(deviceId, until) {
+  const { url, token } = redisEnv();
+  if (!url || !token) return false;
+  const key = 'lumina:session:' + getDeviceSafe(deviceId);
+  const ttl = Math.max(60_000, until - Date.now());
+  try {
+    const r = await fetch(
+      url + '/set/' + encodeURIComponent(key) + '/' + encodeURIComponent(String(until)) + '?PX=' + ttl,
+      { method: 'POST', headers: { Authorization: 'Bearer ' + token } }
+    );
+    return r.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -32,11 +54,7 @@ module.exports = async function handler(req, res) {
   const secret = process.env.KEY_SECRET || process.env.AROLINKS_TOKEN || 'change-me';
   let body = req.body;
   if (typeof body === 'string') {
-    try {
-      body = JSON.parse(body);
-    } catch (_) {
-      body = {};
-    }
+    try { body = JSON.parse(body); } catch (_) { body = {}; }
   }
   body = body || {};
   const code = String(body.code || '').replace(/\s+/g, '');
@@ -46,19 +64,31 @@ module.exports = async function handler(req, res) {
   }
 
   const bucket = Math.floor(Date.now() / (36 * 60 * 60 * 1000));
-  const valid =
-    code === makeCode(deviceId, secret, bucket) ||
-    code === makeCode(deviceId, secret, bucket - 1);
+  const secrets = [];
+  if (process.env.KEY_SECRET) secrets.push(process.env.KEY_SECRET);
+  if (process.env.AROLINKS_TOKEN) secrets.push(process.env.AROLINKS_TOKEN);
+  secrets.push('change-me');
+  let valid = false;
+  const seen = new Set();
+  for (const s of secrets) {
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    if (code === makeCode(deviceId, s, bucket) || code === makeCode(deviceId, s, bucket - 1)) {
+      valid = true;
+      break;
+    }
+  }
 
   if (!valid) {
     return res.status(401).json({
       ok: false,
-      error:
-        'Invalid code for this device. Same phone/browser se Get Key → ads → code copy → Verify. Old code / dusra phone nahi chalega.'
+      error: 'Invalid code for this device. Same phone/browser se Get Key → ads → code copy → Verify.'
     });
   }
 
   const until = Date.now() + 36 * 60 * 60 * 1000;
   const unlockToken = signUnlock(deviceId, until, secret);
-  return res.status(200).json({ ok: true, until, unlockToken });
+  await redisSetSession(deviceId, until);
+
+  return res.status(200).json({ ok: true, until, unlockToken, deviceId });
 };
