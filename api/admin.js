@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     if (!adminPin) {
       return res.status(500).json({
         ok: false,
-        error: 'ADMIN_PIN Vercel env \u092e\u0947\u0902 set \u0928\u0939\u0940\u0902 \u0939\u0948'
+        error: 'ADMIN_PIN missing in Vercel Environment Variables. Add it and Redeploy.'
       });
     }
 
@@ -29,18 +29,18 @@ module.exports = async function handler(req, res) {
       }
     }
     body = body || {};
-    const pin = String(body.pin || '');
+    const pin = String(body.pin || '').trim();
 
     if (!pin) {
-      return res.status(400).json({ ok: false, error: 'PIN required' });
+      return res.status(400).json({ ok: false, error: 'PIN empty — type Admin PIN' });
     }
 
     const a = hashPin(pin);
-    const b = hashPin(adminPin);
+    const b = hashPin(String(adminPin).trim());
     if (a !== b) {
       return res.status(401).json({
         ok: false,
-        error: 'Wrong PIN. Vercel \u2192 Settings \u2192 Environment Variables \u2192 ADMIN_PIN \u091a\u0947\u0915 \u0915\u0930\u094b\u0964'
+        error: 'Wrong ADMIN PIN. Vercel → Settings → Environment Variables → ADMIN_PIN exact match. Then Redeploy.'
       });
     }
 

@@ -41,14 +41,22 @@ module.exports = async function handler(req, res) {
   body = body || {};
   const code = String(body.code || '').replace(/\s+/g, '');
   const deviceId = getDeviceSafe(body.deviceId);
-  if (!/^\d{12}$/.test(code)) return res.status(400).json({ ok: false, error: '12-digit code required' });
+  if (!/^\d{12}$/.test(code)) {
+    return res.status(400).json({ ok: false, error: '12-digit code required (numbers only)' });
+  }
 
   const bucket = Math.floor(Date.now() / (36 * 60 * 60 * 1000));
   const valid =
     code === makeCode(deviceId, secret, bucket) ||
     code === makeCode(deviceId, secret, bucket - 1);
 
-  if (!valid) return res.status(401).json({ ok: false, error: 'Invalid code for this device' });
+  if (!valid) {
+    return res.status(401).json({
+      ok: false,
+      error:
+        'Invalid code for this device. Same phone/browser se Get Key → ads → code copy → Verify. Old code / dusra phone nahi chalega.'
+    });
+  }
 
   const until = Date.now() + 36 * 60 * 60 * 1000;
   const unlockToken = signUnlock(deviceId, until, secret);
