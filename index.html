@@ -517,10 +517,14 @@
   const pwSubmit = document.getElementById('pwSubmit');
   const pwGetKey = document.getElementById('pwGetKeyBtn');
 
+  let contentFromServer = false; // true after /api/content loaded or published
+
   function allStories(){
+    if (contentFromServer) return sharedStories || [];
     return (sharedStories && sharedStories.length) ? sharedStories : DEFAULT_STORIES;
   }
   function allPosts(){
+    if (contentFromServer) return sharedPosts || [];
     return (sharedPosts && sharedPosts.length) ? sharedPosts : DEFAULT_POSTS;
   }
 
@@ -788,8 +792,11 @@
       const r = await fetch('/api/content?t=' + Date.now(), { cache:'no-store' });
       const d = await r.json();
       if(d && d.ok && d.content){
+        contentFromServer = true;
         if(Array.isArray(d.content.posts)) sharedPosts = d.content.posts;
+        else sharedPosts = [];
         if(Array.isArray(d.content.stories)) sharedStories = d.content.stories;
+        else sharedStories = [];
         if(Array.isArray(d.content.about) && d.content.about.length) sharedAbout = d.content.about;
         if(d.content.brand && typeof d.content.brand === 'object'){
           sharedBrand = {
@@ -1005,6 +1012,7 @@
     if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start ho'); return; }
     if(avatar && !/^https?:\/\//i.test(avatar)){ alert('Avatar link https:// se start ho'); return; }
     if(!sharedPosts) sharedPosts = [];
+    contentFromServer = true; // drafts are real list now, not demo defaults
     sharedPosts.unshift({
       id: 'c'+Date.now(), user, avatar, place: place||'Feed', title: title||'Post', caption,
       media, likes: 0, time: 'JUST NOW', gradient: 'linear-gradient(160deg,#5b2d8e,#1a0a2e)'
@@ -1025,6 +1033,7 @@
     if(!title && !body){ alert('Title ya body bharo'); return; }
     if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start ho'); return; }
     if(!sharedStories) sharedStories = [];
+    contentFromServer = true;
     sharedStories.unshift({ id:'cs'+Date.now(), name, title, body, media });
     document.getElementById('asTitle').value='';
     document.getElementById('asBody').value='';
@@ -1085,9 +1094,30 @@
           if(r.status === 401) adminPinSession = '';
           return;
         }
+        // Trust server response + reload
+        if(d.content){
+          contentFromServer = true;
+          sharedPosts = Array.isArray(d.content.posts) ? d.content.posts : [];
+          sharedStories = Array.isArray(d.content.stories) ? d.content.stories : [];
+          if(Array.isArray(d.content.about) && d.content.about.length) sharedAbout = d.content.about;
+          if(d.content.brand) sharedBrand = d.content.brand;
+        }
+        refreshAll();
+        const pc = (sharedPosts||[]).length;
+        const sc = (sharedStories||[]).length;
         err.style.color = '#86efac';
-        err.textContent = 'Published! Sab users refresh karke dekh sakte hain.';
-        setTimeout(()=>{ err.style.color=''; err.textContent=''; }, 4000);
+        err.textContent = 'Published OK · posts=' + pc + ' stories=' + sc + ' · doosra phone refresh kare';
+        // verify round-trip
+        return fetch('/api/content?t=' + Date.now(), {cache:'no-store'}).then(r2=>r2.json()).then(d2=>{
+          if(d2 && d2.content){
+            const p2 = (d2.content.posts||[]).length;
+            err.textContent = 'Server confirm · posts=' + p2 + ' stories=' + (d2.content.stories||[]).length;
+            contentFromServer = true;
+            sharedPosts = d2.content.posts || [];
+            sharedStories = d2.content.stories || [];
+            refreshAll();
+          }
+        }).catch(()=>{});
       })
       .catch(e=>{ err.textContent = 'Network: ' + (e.message||''); })
       .finally(()=>{ btn.disabled=false; btn.textContent='🌐 Publish to all users'; });
