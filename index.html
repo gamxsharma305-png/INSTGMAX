@@ -414,8 +414,8 @@
             <label style="font-weight:700;margin-bottom:8px">Manage · shared feed</label>
             <div id="adminList" style="font-size:12.5px;color:var(--muted);max-height:180px;overflow:auto"></div>
             <p style="font-size:12px;color:var(--muted);margin:10px 0;line-height:1.45">
-              <b style="color:var(--accent)">Publish to everyone</b> GitHub पर सेव करता है — सभी यूज़र्स को दिखेगा।
-              (Vercel env: GITHUB_TOKEN + GITHUB_REPO ज़रूरी)
+              <b style="color:var(--accent)">Publish to everyone</b> permanent store (Upstash) में सेव करता है — सभी यूज़र्स को दिखेगा।
+              (Vercel env: UPSTASH_REDIS_REST_URL + TOKEN ज़रूरी)
             </p>
             <button class="btn btn-primary" type="button" id="adminPublishAll" style="width:100%">🌐 Publish to all users</button>
             <div class="err" id="publishErr" style="margin-top:8px"></div>
