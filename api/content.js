@@ -50,6 +50,50 @@ function hashPin(pin) {
   return crypto.createHash('sha256').update(String(pin)).digest('hex');
 }
 
+function getDeviceSafe(id) {
+  const s = String(id || 'XXXX').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  return (s + 'XXXXXXXX').slice(0, 8);
+}
+
+function verifyUnlockToken(token, secret) {
+  try {
+    if (!token || !secret) return null;
+    const raw = Buffer.from(String(token), 'base64url').toString('utf8');
+    const parts = raw.split('.');
+    if (parts.length !== 3) return null;
+    const [deviceId, untilStr, sig] = parts;
+    const until = parseInt(untilStr, 10);
+    if (!until || Date.now() > until) return null;
+    const payload = deviceId + '.' + untilStr;
+    const expect = crypto.createHmac('sha256', secret).update(payload).digest('hex').slice(0, 32);
+    if (sig !== expect) return null;
+    return { deviceId, until };
+  } catch (_) {
+    return null;
+  }
+}
+
+function redactContent(content) {
+  const c = normalize(content);
+  return {
+    ...c,
+    posts: (c.posts || []).map((p) => ({
+      ...p,
+      media: '',
+      mediaLocked: true,
+      caption: p.caption ? 'Unlock to view' : ''
+    })),
+    stories: (c.stories || []).map((s) => ({
+      ...s,
+      media: '',
+      mediaLocked: true,
+      body: 'Unlock to view',
+      title: s.title || 'Story'
+    })),
+    locked: true
+  };
+}
+
 function checkAdmin(body) {
   const adminPin = process.env.ADMIN_PIN;
   if (!adminPin) return false;
@@ -64,7 +108,6 @@ function redisEnv() {
   return { url, token };
 }
 
-/** Upstash may return value as object or 1–2x JSON string */
 function parseRedisResult(result) {
   let v = result;
   for (let i = 0; i < 4; i++) {
@@ -109,7 +152,6 @@ async function redisSet(obj) {
   if (!url || !token) {
     throw new Error('UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN missing in Vercel env');
   }
-  // Upstash REST: body = JSON value directly (one encode). GET result needs one JSON.parse if string.
   const r = await fetch(url + '/set/' + encodeURIComponent(KEY), {
     method: 'POST',
     headers: {
@@ -150,22 +192,52 @@ module.exports = async function handler(req, res) {
       res.statusCode = 200;
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-unlock-token');
       return res.end();
     }
 
     if (req.method === 'GET') {
+      const secret = process.env.KEY_SECRET || process.env.AROLINKS_TOKEN || 'change-me';
+      const q = req.query || {};
+      const token =
+        (req.headers && (req.headers['x-unlock-token'] || req.headers['X-Unlock-Token'])) ||
+        q.token ||
+        '';
+      const unlocked = verifyUnlockToken(token, secret);
+
       const got = await redisGet();
       if (got.error) {
-        return send(res, 200, { ok: true, content: DEFAULT, source: 'default', warn: got.error });
+        return send(res, 200, {
+          ok: true,
+          content: unlocked ? DEFAULT : redactContent(DEFAULT),
+          source: 'default',
+          warn: got.error,
+          mediaUnlocked: !!unlocked
+        });
       }
       if (!got.data) {
-        return send(res, 200, { ok: true, content: DEFAULT, source: 'empty' });
+        return send(res, 200, {
+          ok: true,
+          content: unlocked ? DEFAULT : redactContent(DEFAULT),
+          source: 'empty',
+          mediaUnlocked: !!unlocked
+        });
+      }
+      const full = normalize(got.data);
+      if (!unlocked) {
+        return send(res, 200, {
+          ok: true,
+          content: redactContent(full),
+          source: 'upstash',
+          mediaUnlocked: false
+        });
       }
       return send(res, 200, {
         ok: true,
-        content: normalize(got.data),
-        source: 'upstash'
+        content: full,
+        source: 'upstash',
+        mediaUnlocked: true,
+        until: unlocked.until
       });
     }
 
@@ -178,10 +250,6 @@ module.exports = async function handler(req, res) {
           body = {};
         }
       }
-      // Vercel sometimes leaves body as Buffer / empty — try raw if needed
-      if (!body || (typeof body === 'object' && !body.pin && !body.posts && Object.keys(body).length === 0)) {
-        // keep as is
-      }
       body = body || {};
 
       if (!checkAdmin(body)) {
@@ -192,7 +260,7 @@ module.exports = async function handler(req, res) {
       if (!url || !token) {
         return send(res, 500, {
           ok: false,
-          error: 'UPSTASH_REDIS_REST_URL और UPSTASH_REDIS_REST_TOKEN Vercel env में जोड़ो, फिर Redeploy।'
+          error: 'UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN required in Vercel env'
         });
       }
 
