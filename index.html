@@ -49,7 +49,23 @@
     background:linear-gradient(135deg,var(--accent),var(--pink));
     display:grid;place-items:center;font-weight:800;color:#1a0a2a;font-size:14px;
     box-shadow:0 0 24px rgba(196,161,255,.35);
+    overflow:hidden;flex-shrink:0;
   }
+  .logo img{width:100%;height:100%;object-fit:cover;border-radius:12px}
+  .post-av{overflow:hidden}
+  .post-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+  /* Stories locked until unlock */
+  .stories-wrap{position:relative}
+  .feed.locked .stories{
+    filter:blur(14px);user-select:none;pointer-events:none
+  }
+  .stories-lock{
+    display:none;position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);
+    z-index:3;text-align:center;padding:12px;border-radius:14px;
+    background:rgba(18,8,28,.75);border:1px solid var(--line);backdrop-filter:blur(8px)
+  }
+  .feed.locked ~ .stories-lock, .stories-wrap.locked .stories-lock{display:block}
+  .stories-wrap.locked .stories{filter:blur(14px);pointer-events:none;user-select:none}
   .brand h1{font-size:18px;font-weight:800;letter-spacing:-.02em}
   .brand p{font-size:11px;color:var(--muted)}
   .top-actions{display:flex;gap:8px}
@@ -292,10 +308,10 @@
 <div class="app" id="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">L</div>
+      <div class="logo" id="brandLogo">L</div>
       <div>
-        <h1>Lumina</h1>
-        <p>Study feed · gated classroom</p>
+        <h1 id="brandName">GMAX Hub</h1>
+        <p id="brandTag">Study feed · gated classroom</p>
       </div>
     </div>
     <div class="top-actions">
@@ -309,7 +325,10 @@
   <div class="screens">
     <!-- HOME / FEED -->
     <section class="screen active" id="screenHome">
-      <div class="stories" id="storiesRow"></div>
+      <div class="stories-wrap locked" id="storiesWrap">
+        <div class="stories" id="storiesRow"></div>
+        <div class="stories-lock">🔒 Stories unlock ke baad<br/><button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock</button></div>
+      </div>
       <div class="feed locked" id="feed">
         <div class="lock-banner">
           <h3>🔒 Posts are blurred</h3>
@@ -343,9 +362,24 @@
           </div>
 
           <div class="admin-box" style="margin-top:14px">
+            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🖼️ Profile / Logo (sab jagah)</label>
+            <label>Site name</label>
+            <input type="text" id="brandNameInput" placeholder="GMAX Hub" value="GMAX Hub"/>
+            <label>Tagline</label>
+            <input type="text" id="brandTagInput" placeholder="Study feed · gated classroom"/>
+            <label>Main logo image link (top left)</label>
+            <input type="url" id="brandLogoInput" placeholder="https://… image URL"/>
+            <label>Default post avatar image link</label>
+            <input type="url" id="brandAvatarInput" placeholder="https://… image URL"/>
+            <button class="btn btn-ghost" type="button" id="brandApplyBtn" style="width:100%">Apply profile on screen</button>
+          </div>
+
+          <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Post (link only)</label>
             <label>Username</label>
-            <input type="text" id="apUser" placeholder="lumina.study" value="lumina.study"/>
+            <input type="text" id="apUser" placeholder="Sunita" value="Sunita"/>
+            <label>User avatar image link (post ke bagal wala)</label>
+            <input type="url" id="apAvatar" placeholder="https://… image URL"/>
             <label>Title</label>
             <input type="text" id="apTitle" placeholder="Chapter name"/>
             <label>Caption</label>
@@ -469,6 +503,7 @@
   let sharedPosts = [];
   let sharedStories = [];
   let sharedAbout = DEFAULT_ABOUT.map(a => ({...a, bullets: [...(a.bullets||[])]}));
+  let sharedBrand = { name:'GMAX Hub', tag:'Study feed · gated classroom', logo:'', avatar:'' };
   let adminPinSession = '';
 
   const feed = document.getElementById('feed');
@@ -518,6 +553,8 @@
     const until = getUntil();
     const ok = until > Date.now();
     feed.classList.toggle('locked', !ok);
+    const sw = document.getElementById('storiesWrap');
+    if(sw) sw.classList.toggle('locked', !ok);
     if(ok){
       timerChip.classList.add('show');
       if(tick) clearInterval(tick);
@@ -568,7 +605,33 @@
     </div>`;
   }
 
-  function renderAbout(){
+  function applyBrand(){
+    const name = sharedBrand.name || 'GMAX Hub';
+    const tag = sharedBrand.tag || 'Study feed · gated classroom';
+    const logo = sharedBrand.logo || '';
+    const elName = document.getElementById('brandName');
+    const elTag = document.getElementById('brandTag');
+    const elLogo = document.getElementById('brandLogo');
+    if(elName) elName.textContent = name;
+    if(elTag) elTag.textContent = tag;
+    if(elLogo){
+      if(logo && /^https?:\/\//i.test(logo)){
+        elLogo.innerHTML = '<img src="'+logo.replace(/"/g,'')+'" alt="" draggable="false"/>';
+      } else {
+        elLogo.textContent = (name[0]||'G').toUpperCase();
+      }
+    }
+    const ni = document.getElementById('brandNameInput');
+    const ti = document.getElementById('brandTagInput');
+    const li = document.getElementById('brandLogoInput');
+    const ai = document.getElementById('brandAvatarInput');
+    if(ni && !ni.value) ni.value = name;
+    if(ti && document.activeElement !== ti) ti.value = tag;
+    if(li && document.activeElement !== li) li.value = logo;
+    if(ai && document.activeElement !== ai) ai.value = sharedBrand.avatar || '';
+  }
+
+    function renderAbout(){
     const deck = document.getElementById('aboutDeck');
     if(!deck) return;
     const slides = sharedAbout && sharedAbout.length ? sharedAbout : DEFAULT_ABOUT;
@@ -642,7 +705,7 @@
       el.dataset.id = p.id;
       el.innerHTML = `
         <div class="post-head">
-          <div class="post-av">${(p.user||'L')[0].toUpperCase()}</div>
+          <div class="post-av">${(p.avatar||sharedBrand.avatar) ? '<img src="'+String(p.avatar||sharedBrand.avatar).replace(/"/g,'')+'" alt="" draggable="false"/>' : (p.user||'L')[0].toUpperCase()}</div>
           <div class="post-meta"><strong>${p.user||'lumina'}</strong><small>${p.place||''}</small></div>
         </div>
         ${mediaBlock(p.media, p.gradient, p.title)}
@@ -712,6 +775,7 @@
   }
 
   function refreshAll(){
+    applyBrand();
     renderStories();
     renderPosts();
     renderAbout();
@@ -727,6 +791,14 @@
         if(Array.isArray(d.content.posts)) sharedPosts = d.content.posts;
         if(Array.isArray(d.content.stories)) sharedStories = d.content.stories;
         if(Array.isArray(d.content.about) && d.content.about.length) sharedAbout = d.content.about;
+        if(d.content.brand && typeof d.content.brand === 'object'){
+          sharedBrand = {
+            name: d.content.brand.name || sharedBrand.name,
+            tag: d.content.brand.tag || sharedBrand.tag,
+            logo: d.content.brand.logo || '',
+            avatar: d.content.brand.avatar || ''
+          };
+        }
       }
     }catch(e){ console.warn('content load', e); }
     refreshAll();
@@ -923,21 +995,24 @@
   };
 
   document.getElementById('apAdd').onclick = ()=>{
-    const user = (document.getElementById('apUser').value||'lumina.study').trim();
+    const user = (document.getElementById('apUser').value||'Sunita').trim();
+    const avatar = (document.getElementById('apAvatar') && document.getElementById('apAvatar').value || '').trim() || (sharedBrand.avatar||'');
     const title = (document.getElementById('apTitle').value||'').trim();
     const caption = (document.getElementById('apCaption').value||'').trim();
     const media = (document.getElementById('apMedia').value||'').trim();
     const place = (document.getElementById('apPlace').value||'').trim();
     if(!title && !caption && !media){ alert('Title, caption ya media link bharo'); return; }
     if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start ho'); return; }
+    if(avatar && !/^https?:\/\//i.test(avatar)){ alert('Avatar link https:// se start ho'); return; }
     if(!sharedPosts) sharedPosts = [];
     sharedPosts.unshift({
-      id: 'c'+Date.now(), user, place: place||'Feed', title: title||'Post', caption,
+      id: 'c'+Date.now(), user, avatar, place: place||'Feed', title: title||'Post', caption,
       media, likes: 0, time: 'JUST NOW', gradient: 'linear-gradient(160deg,#5b2d8e,#1a0a2e)'
     });
     document.getElementById('apTitle').value='';
     document.getElementById('apCaption').value='';
     document.getElementById('apMedia').value='';
+    if(document.getElementById('apAvatar')) document.getElementById('apAvatar').value='';
     refreshAll();
     alert('Post draft ready. Ab "Publish to all users" dabao taaki sabko dikhe.');
   };
@@ -981,6 +1056,12 @@
       adminPinSession = pin;
     }
     sharedAbout = readAboutFromEditor();
+    sharedBrand = {
+      name: (document.getElementById('brandNameInput')&&document.getElementById('brandNameInput').value)||sharedBrand.name,
+      tag: (document.getElementById('brandTagInput')&&document.getElementById('brandTagInput').value)||sharedBrand.tag,
+      logo: (document.getElementById('brandLogoInput')&&document.getElementById('brandLogoInput').value)||'',
+      avatar: (document.getElementById('brandAvatarInput')&&document.getElementById('brandAvatarInput').value)||''
+    };
     const btn = document.getElementById('adminPublishAll');
     btn.disabled = true;
     btn.textContent = 'Publishing…';
@@ -991,7 +1072,8 @@
         pin: adminPinSession,
         posts: sharedPosts || [],
         stories: sharedStories || [],
-        about: sharedAbout
+        about: sharedAbout,
+        brand: sharedBrand
       })
     })
       .then(async r=>{
@@ -1011,7 +1093,22 @@
       .finally(()=>{ btn.disabled=false; btn.textContent='🌐 Publish to all users'; });
   };
 
-  document.addEventListener('contextmenu', function(e){
+  const brandApply = document.getElementById('brandApplyBtn');
+  if(brandApply) brandApply.onclick = ()=>{
+    sharedBrand = {
+      name: (document.getElementById('brandNameInput')&&document.getElementById('brandNameInput').value)||'GMAX Hub',
+      tag: (document.getElementById('brandTagInput')&&document.getElementById('brandTagInput').value)||'',
+      logo: (document.getElementById('brandLogoInput')&&document.getElementById('brandLogoInput').value)||'',
+      avatar: (document.getElementById('brandAvatarInput')&&document.getElementById('brandAvatarInput').value)||''
+    };
+    applyBrand();
+    renderPosts();
+    alert('Profile applied on screen. Publish to all users se sab devices par jayega.');
+  };
+  const btnUS = document.getElementById('btnUnlockStories');
+  if(btnUS) btnUS.onclick = openUnlock;
+
+    document.addEventListener('contextmenu', function(e){
     if(e.target.closest('.post-media, .no-save, .viewer-body')) e.preventDefault();
   }, {capture:true});
 
