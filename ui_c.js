@@ -1,0 +1,1 @@
+window.__GMAX_UI_C='PLACEHOLDER_C';
