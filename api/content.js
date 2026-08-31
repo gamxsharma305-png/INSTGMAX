@@ -1,11 +1,6 @@
 /**
- * Permanent shared content store — Upstash Redis REST
- * (no GitHub commits; survives refresh for all users)
- *
- * Env (required):
- *   UPSTASH_REDIS_REST_URL
- *   UPSTASH_REDIS_REST_TOKEN
- *   ADMIN_PIN
+ * Permanent shared content — Upstash Redis REST
+ * Env: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, ADMIN_PIN
  */
 const crypto = require('crypto');
 
@@ -69,6 +64,24 @@ function redisEnv() {
   return { url, token };
 }
 
+/** Upstash may return value as object or 1–2x JSON string */
+function parseRedisResult(result) {
+  let v = result;
+  for (let i = 0; i < 4; i++) {
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) return v;
+    if (typeof v !== 'string') break;
+    const s = v.trim();
+    if (!s) return null;
+    try {
+      v = JSON.parse(s);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (v !== null && typeof v === 'object' && !Array.isArray(v)) return v;
+  return null;
+}
+
 async function redisGet() {
   const { url, token } = redisEnv();
   if (!url || !token) {
@@ -81,16 +94,14 @@ async function redisGet() {
   if (!r.ok) {
     return { error: 'Redis GET ' + r.status + ': ' + JSON.stringify(j).slice(0, 200) };
   }
-  // Upstash returns { result: "<json string>" | null }
   if (j.result == null || j.result === '') {
     return { data: null };
   }
-  try {
-    const parsed = typeof j.result === 'string' ? JSON.parse(j.result) : j.result;
-    return { data: parsed };
-  } catch (e) {
-    return { error: 'Redis value parse failed' };
+  const parsed = parseRedisResult(j.result);
+  if (!parsed) {
+    return { error: 'Redis value could not be parsed as JSON object' };
   }
+  return { data: parsed };
 }
 
 async function redisSet(obj) {
@@ -98,14 +109,14 @@ async function redisSet(obj) {
   if (!url || !token) {
     throw new Error('UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN missing in Vercel env');
   }
-  // Upstash REST: POST /set/key  body = value as raw string
+  // Upstash REST: body = JSON value directly (one encode). GET result needs one JSON.parse if string.
   const r = await fetch(url + '/set/' + encodeURIComponent(KEY), {
     method: 'POST',
     headers: {
       Authorization: 'Bearer ' + token,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(JSON.stringify(obj))
+    body: JSON.stringify(obj)
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
@@ -115,7 +126,7 @@ async function redisSet(obj) {
 }
 
 function normalize(c) {
-  c = c || {};
+  c = c && typeof c === 'object' ? c : {};
   return {
     posts: Array.isArray(c.posts) ? c.posts : [],
     stories: Array.isArray(c.stories) ? c.stories : [],
@@ -146,7 +157,6 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       const got = await redisGet();
       if (got.error) {
-        // still return default so site loads; warn for admin
         return send(res, 200, { ok: true, content: DEFAULT, source: 'default', warn: got.error });
       }
       if (!got.data) {
@@ -168,6 +178,10 @@ module.exports = async function handler(req, res) {
           body = {};
         }
       }
+      // Vercel sometimes leaves body as Buffer / empty — try raw if needed
+      if (!body || (typeof body === 'object' && !body.pin && !body.posts && Object.keys(body).length === 0)) {
+        // keep as is
+      }
       body = body || {};
 
       if (!checkAdmin(body)) {
@@ -178,8 +192,7 @@ module.exports = async function handler(req, res) {
       if (!url || !token) {
         return send(res, 500, {
           ok: false,
-          error:
-            'Permanent store not configured. Vercel env में UPSTASH_REDIS_REST_URL और UPSTASH_REDIS_REST_TOKEN जोड़ो (Upstash free).'
+          error: 'UPSTASH_REDIS_REST_URL और UPSTASH_REDIS_REST_TOKEN Vercel env में जोड़ो, फिर Redeploy।'
         });
       }
 
@@ -187,22 +200,20 @@ module.exports = async function handler(req, res) {
         posts: body.posts,
         stories: body.stories,
         about: body.about,
-        brand: body.brand,
-        updatedAt: new Date().toISOString()
+        brand: body.brand
       });
       contentObj.updatedAt = new Date().toISOString();
 
       try {
         await redisSet(contentObj);
       } catch (e) {
-        return send(res, 500, {
-          ok: false,
-          error: String(e && e.message ? e.message : e)
-        });
+        return send(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
       }
 
-      // read-back confirm
       const confirm = await redisGet();
+      if (confirm.error) {
+        return send(res, 500, { ok: false, error: 'Saved but read-back failed: ' + confirm.error });
+      }
       const saved = confirm.data ? normalize(confirm.data) : contentObj;
 
       return send(res, 200, {
