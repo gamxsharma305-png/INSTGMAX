@@ -1,0 +1,6 @@
+AROLINKS_TOKEN=7c4a066dd4d4af3edc6927985f0e493b39ebd8c9
+KEY_SECRET=lumina_key_secret_change_me_9f3a2b
+ADMIN_PIN=md2!M%ZTOuV7dp3*zV
+SITE_URL=https://instgmax.vercel.app
+UPSTASH_REDIS_REST_URL=https://YOUR.upstash.io
+UPSTASH_REDIS_REST_TOKEN=YOUR_TOKEN
