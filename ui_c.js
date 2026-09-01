@@ -1,1 +1,0 @@
-window.__GMAX_UI_C='TEMP';
