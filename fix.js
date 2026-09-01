@@ -7,7 +7,7 @@
     if (until > Date.now() && !token) {
       localStorage.removeItem(KEY);
       localStorage.removeItem(TOK);
-      console.warn('[gmax] cleared timer-only session — unlock again for media');
+      console.warn('[gmax] cleared timer-only session');
     }
   } catch (e) {}
 })();
