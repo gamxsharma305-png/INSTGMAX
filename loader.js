@@ -1,7 +1,7 @@
 (async function(){
   try {
     var b64 = '';
-    for (var i = 0; i < 30; i++) {
+    for (var i = 0; i < 40; i++) {
       var p = window['__GMAX_P' + i];
       if (!p) throw new Error('missing chunk p' + i);
       b64 += p;
