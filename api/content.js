@@ -109,6 +109,7 @@ async function redisSet(obj) {
   if (!url || !token) {
     throw new Error('UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN missing in Vercel env');
   }
+  // Upstash REST: body = JSON value directly (one encode). GET result needs one JSON.parse if string.
   const r = await fetch(url + '/set/' + encodeURIComponent(KEY), {
     method: 'POST',
     headers: {
@@ -176,6 +177,10 @@ module.exports = async function handler(req, res) {
         } catch (_) {
           body = {};
         }
+      }
+      // Vercel sometimes leaves body as Buffer / empty — try raw if needed
+      if (!body || (typeof body === 'object' && !body.pin && !body.posts && Object.keys(body).length === 0)) {
+        // keep as is
       }
       body = body || {};
 
