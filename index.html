@@ -24,10 +24,9 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;background:var(--bg);color:var(--text);
     font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    -webkit-tap-highlight-color:transparent;
-    -webkit-user-select:none; user-select:none;}
+    -webkit-tap-highlight-color:transparent}
   body{overflow:hidden}
-  button,input,textarea{font:inherit;color:inherit}
+  button,input{font:inherit;color:inherit}
   a{color:inherit;text-decoration:none}
   img{display:block;max-width:100%}
 
@@ -53,9 +52,23 @@
     overflow:hidden;flex-shrink:0;
   }
   .logo img{width:100%;height:100%;object-fit:cover;border-radius:12px}
+  .post-av{overflow:hidden}
+  .post-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+  /* Stories locked until unlock */
+  .stories-wrap{position:relative}
+  .feed.locked .stories{
+    filter:blur(14px);user-select:none;pointer-events:none
+  }
+  .stories-lock{
+    display:none;position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);
+    z-index:3;text-align:center;padding:12px;border-radius:14px;
+    background:rgba(18,8,28,.75);border:1px solid var(--line);backdrop-filter:blur(8px)
+  }
+  .feed.locked ~ .stories-lock, .stories-wrap.locked .stories-lock{display:block}
+  .stories-wrap.locked .stories{filter:blur(14px);pointer-events:none;user-select:none}
   .brand h1{font-size:18px;font-weight:800;letter-spacing:-.02em}
   .brand p{font-size:11px;color:var(--muted)}
-  .top-actions{display:flex;gap:8px;align-items:center}
+  .top-actions{display:flex;gap:8px}
   .icon-btn{
     width:38px;height:38px;border-radius:12px;border:1px solid var(--line);
     background:var(--panel);backdrop-filter:var(--glass);cursor:pointer;
@@ -71,7 +84,6 @@
   .screen.active{opacity:1;pointer-events:auto;transform:none}
 
   /* Stories */
-  .stories-wrap{position:relative}
   .stories{
     display:flex;gap:12px;padding:14px 14px 6px;overflow-x:auto;
     scrollbar-width:none;
@@ -96,14 +108,6 @@
   .story span{font-size:11px;color:var(--muted);display:block;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis;max-width:72px;margin:0 auto}
 
-  .stories-lock{
-    display:none;position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);
-    z-index:3;text-align:center;padding:12px;border-radius:14px;
-    background:rgba(18,8,28,.75);border:1px solid var(--line);backdrop-filter:blur(8px)
-  }
-  .feed.locked ~ .stories-lock, .stories-wrap.locked .stories-lock{display:block}
-  .stories-wrap.locked .stories{filter:blur(14px);pointer-events:none;user-select:none}
-
   /* Feed */
   .feed{padding:8px 0 20px}
   .post{
@@ -113,10 +117,9 @@
     display:flex;align-items:center;gap:10px;padding:8px 14px
   }
   .post-av{
-    width:36px;height:36px;border-radius:50%;overflow:hidden;
+    width:36px;height:36px;border-radius:50%;
     background:linear-gradient(135deg,var(--accent2),var(--pink));
-    display:grid;place-items:center;font-weight:700;font-size:13px;color:#1a0a2a;
-    flex-shrink:0;
+    display:grid;place-items:center;font-weight:700;font-size:13px;color:#1a0a2a
   }
   .post-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
   .post-meta{flex:1;min-width:0}
@@ -141,7 +144,7 @@
   .caption strong{margin-right:6px}
   .time{padding:4px 14px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 
-  /* Blur gate overlay */
+  /* Blur gate overlay on feed content */
   .feed.locked .post-media,
   .feed.locked .caption,
   .feed.locked .likes,
@@ -192,7 +195,7 @@
   }
   .timer-chip.show{display:inline-flex}
 
-  /* About Deck */
+  /* About — 3 slides */
   .about-deck{
     height:100%;scroll-snap-type:y mandatory;overflow-y:auto
   }
@@ -215,6 +218,11 @@
   .about-card li::before{content:"";width:8px;height:8px;margin-top:6px;border-radius:50%;
     background:linear-gradient(135deg,var(--accent),var(--pink));flex-shrink:0}
 
+  .about-slide .about-img{
+    width:100%;max-height:220px;object-fit:cover;border-radius:14px;
+    border:1px solid var(--line);margin:4px 0 8px;
+  }
+
   /* Admin */
   .admin-wrap{padding:18px 14px 100px}
   .admin-wrap h2{font-size:20px;margin-bottom:8px}
@@ -236,7 +244,7 @@
   .stat b{display:block;font-size:20px}
   .stat span{font-size:11px;color:var(--muted)}
 
-  /* Bottom nav */
+  /* Bottom nav — Instagram style */
   .tabbar{
     position:absolute;left:0;right:0;bottom:0;z-index:10;
     display:flex;justify-content:space-around;align-items:center;
@@ -253,7 +261,7 @@
   .tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7}
   .tab.active svg{fill:rgba(196,161,255,.2)}
 
-  /* Story viewer */
+  /* Story viewer fullscreen */
   .viewer{
     position:fixed;inset:0;z-index:60;background:#000;display:none;flex-direction:column
   }
@@ -279,17 +287,20 @@
     color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px
   }
 
-  /* Media Protection */
+  
+  /* Block long-press save / callout on media */
   .no-save, .post-media, .post-media img, .post-media video,
-  .viewer-body, .viewer-body img {
+  .viewer-body, .viewer-body img, .story-media {
     -webkit-user-select:none; user-select:none;
     -webkit-touch-callout:none;
-    -webkit-user-drag:none;
+    -webkit-user-drag:none; user-drag:none;
     pointer-events:auto;
   }
   .post-media img, .post-media video { pointer-events:none; }
   .media-protect { position:relative; }
-  .media-protect::after { content:""; position:absolute; inset:0; z-index:2; }
+  .media-protect::after {
+    content:""; position:absolute; inset:0; z-index:2;
+  }
 
   @media(min-width:520px){
     body{display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
@@ -302,7 +313,7 @@
 <div class="app" id="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo" id="brandLogo">G</div>
+      <div class="logo" id="brandLogo">L</div>
       <div>
         <h1 id="brandName">GMAX Hub</h1>
         <p id="brandTag">Study feed · gated classroom</p>
@@ -321,10 +332,7 @@
     <section class="screen active" id="screenHome">
       <div class="stories-wrap locked" id="storiesWrap">
         <div class="stories" id="storiesRow"></div>
-        <div class="stories-lock">
-          🔒 Stories unlock ke baad<br/>
-          <button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock</button>
-        </div>
+        <div class="stories-lock">🔒 Stories unlock ke baad<br/><button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock</button></div>
       </div>
       <div class="feed locked" id="feed">
         <div class="lock-banner">
@@ -336,7 +344,7 @@
       </div>
     </section>
 
-    <!-- ABOUT -->
+    <!-- ABOUT 3 slides -->
     <section class="screen" id="screenAbout">
       <div class="about-deck" id="aboutDeck"></div>
     </section>
@@ -346,14 +354,12 @@
       <div class="admin-wrap">
         <h2>Admin panel</h2>
         <p class="sub">PIN is checked only on the server (Vercel env). Never stored in this page source as plain text for production.</p>
-        
         <div class="admin-box" id="adminLoginBox">
           <label>Admin PIN</label>
           <input type="password" id="adminPin" placeholder="••••••" autocomplete="off"/>
           <button class="btn btn-primary" type="button" id="adminLoginBtn" style="width:100%">Login</button>
           <div class="err" id="adminErr"></div>
         </div>
-
         <div id="adminDash" style="display:none">
           <div class="stat-row">
             <div class="stat"><b id="statPosts">0</b><span>Posts</span></div>
@@ -363,7 +369,7 @@
           <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🖼️ Profile / Logo (sab jagah)</label>
             <label>Site name</label>
-            <input type="text" id="brandNameInput" placeholder="GMAX Hub"/>
+            <input type="text" id="brandNameInput" placeholder="GMAX Hub" value="GMAX Hub"/>
             <label>Tagline</label>
             <input type="text" id="brandTagInput" placeholder="Study feed · gated classroom"/>
             <label>Main logo image link (top left)</label>
@@ -373,7 +379,7 @@
             <button class="btn btn-ghost" type="button" id="brandApplyBtn" style="width:100%">Apply profile on screen</button>
           </div>
 
-          <div class="admin-box">
+          <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Post (link only)</label>
             <label>Username</label>
             <input type="text" id="apUser" placeholder="Sunita" value="Sunita"/>
@@ -413,7 +419,8 @@
             <label style="font-weight:700;margin-bottom:8px">Manage · shared feed</label>
             <div id="adminList" style="font-size:12.5px;color:var(--muted);max-height:180px;overflow:auto"></div>
             <p style="font-size:12px;color:var(--muted);margin:10px 0;line-height:1.45">
-              <b style="color:var(--accent)">Publish to everyone</b> permanent store (Upstash) mein save karega — sabhi users ko dikhega.
+              <b style="color:var(--accent)">Publish to everyone</b> permanent store (Upstash) में सेव करता है — सभी यूज़र्स को दिखेगा।
+              (Vercel env: UPSTASH_REDIS_REST_URL + TOKEN ज़रूरी)
             </p>
             <button class="btn btn-primary" type="button" id="adminPublishAll" style="width:100%">🌐 Publish to all users</button>
             <div class="err" id="publishErr" style="margin-top:8px"></div>
@@ -441,11 +448,11 @@
   </nav>
 </div>
 
-<!-- Unlock Modal -->
+<!-- Unlock sheet -->
 <div class="modal" id="unlockModal">
   <div class="sheet">
     <h2>Unlock Lumina</h2>
-    <p class="sub">1) Tap <b>Get Key</b> → copy 12-digit code<br/>2) Paste below → Verify · valid <b>36 hours</b></p>
+    <p class="sub">1) Tap <b>Get Key</b> (AroLinks link) → copy 12-digit code<br/>2) Paste below → Verify · valid <b>36 hours</b></p>
     <input id="pwInput" type="text" inputmode="numeric" maxlength="12" placeholder="12-digit code" autocomplete="one-time-code"/>
     <div class="err" id="pwErr"></div>
     <div class="row">
@@ -456,13 +463,13 @@
   </div>
 </div>
 
-<!-- Story Viewer -->
+<!-- Story viewer -->
 <div class="viewer" id="storyViewer">
   <div class="viewer-progress" id="viewerProgress"></div>
   <div class="viewer-head">
-    <div class="av" id="viewerAv">G</div>
+    <div class="av" id="viewerAv">L</div>
     <div>
-      <strong id="viewerName">GMAX Hub</strong>
+      <strong id="viewerName">Lumina</strong>
       <div style="font-size:11px;opacity:.7" id="viewerTime">just now</div>
     </div>
   </div>
@@ -471,69 +478,19 @@
 </div>
 
 <script>
-/* =========================================================
-   SECURITY & VIEW-SOURCE HARDENING LAYER
-   ========================================================= */
-(function() {
-  // 1. Disable Right Click globally
-  document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-    return false;
-  }, true);
-
-  // 2. Block Inspect Element / View Source Short-keys
-  document.addEventListener('keydown', function(e) {
-    // F12
-    if (e.keyCode === 123) {
-      e.preventDefault();
-      return false;
-    }
-    // Ctrl+U (View Source)
-    if (e.ctrlKey && (e.keyCode === 85 || e.key === 'u' || e.key === 'U')) {
-      e.preventDefault();
-      return false;
-    }
-    // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (DevTools)
-    if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67 || e.key === 'I' || e.key === 'J' || e.key === 'C')) {
-      e.preventDefault();
-      return false;
-    }
-    // Cmd+Option+I / Cmd+Option+J (Mac)
-    if (e.metaKey && e.altKey && (e.keyCode === 73 || e.keyCode === 74)) {
-      e.preventDefault();
-      return false;
-    }
-  }, true);
-
-  // 3. Anti-DevTools Debugger Loop
-  setInterval(function() {
-    (function antiDevTools(i) {
-      if (("" + i / i).length !== 1 || i === 0) {
-        (function() {}).constructor("debugger")();
-      } else {
-        (function() {}).constructor("debugger")();
-      }
-      antiDevTools(++i);
-    })(0);
-  }, 1000);
-})();
-
-/* =========================================================
-   MAIN APP LOGIC
-   ========================================================= */
 (function(){
   const DEFAULT_STORIES = [
-    { id:'s1', name:'Tips', title:'Pomodoro 25+5', body:'Padhai 25 min, break 5 min. 4 rounds ke baad lambi break.', media:'' },
-    { id:'s2', name:'Math', title:'Formula Wall', body:'Quadratic roots practice. Roz 5 sawal solve karein.', media:'' },
-    { id:'s3', name:'Science', title:'NCERT First', body:'Diagrams label karke likhna seekhein.', media:'' },
-    { id:'s4', name:'English', title:'Daily Habit', body:'Roz ek paragraph rewrite aur read karein.', media:'' },
-    { id:'s5', name:'Mindset', title:'Consistency', body:'Daily continuous study > last moment revision.', media:'' }
+    { id:'s1', name:'Tips', title:'Pomodoro 25+5', body:'Padhai 25 min, break 5 min. 4 rounds ke baad lambi break. Focus badhega.', media:'' },
+    { id:'s2', name:'Math', title:'Formula wall', body:'Quadratic roots practice. Roz 5 sawal.', media:'' },
+    { id:'s3', name:'Science', title:'NCERT first', body:'Diagrams label karke likho.', media:'' },
+    { id:'s4', name:'English', title:'One para/day', body:'Roz ek paragraph rewrite.', media:'' },
+    { id:'s5', name:'Mindset', title:'Consistency', body:'Roz thoda > kabhi-kabhi bahut.', media:'' }
   ];
 
   const DEFAULT_POSTS = [
-    { id:'p1', user:'lumina.study', place:'Classroom', title:'Week Plan', caption:'Is hafte Algebra + Chemical Reactions ka target hai.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
-    { id:'p2', user:'lumina.study', place:'Notes', title:'Revision Sheet', caption:'One-page revision sheet: Definitions & 3 Solved Examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
-    { id:'p3', user:'mentor.aria', place:'Live', title:'Doubt Hour', caption:'Unlock karne ke baad saare deep resources access honge.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
+    { id:'p1', user:'lumina.study', place:'Classroom', title:'Week plan', caption:'Is hafte Algebra + Chemical reactions.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
+    { id:'p2', user:'lumina.study', place:'Notes', title:'Revision sheet', caption:'One-page revision: definitions + 3 examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
+    { id:'p3', user:'mentor.aria', place:'Live', title:'Doubt hour', caption:'Unlock ke baad full resources milenge.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
   ];
 
   const DEFAULT_ABOUT = [
@@ -546,13 +503,13 @@
   const DEVICE_KEY = 'lumina_device_id';
   const SEEN_KEY = 'lumina_seen_stories';
   const ADMIN_KEY = 'lumina_admin_until';
+  const ADMIN_PIN_CACHE = 'lumina_admin_pin_session'; // only in memory-ish session for publish
 
   let sharedPosts = [];
   let sharedStories = [];
   let sharedAbout = DEFAULT_ABOUT.map(a => ({...a, bullets: [...(a.bullets||[])]}));
   let sharedBrand = { name:'GMAX Hub', tag:'Study feed · gated classroom', logo:'', avatar:'' };
   let adminPinSession = '';
-  let contentFromServer = false;
 
   const feed = document.getElementById('feed');
   const postsEl = document.getElementById('posts');
@@ -564,6 +521,8 @@
   const pwErr = document.getElementById('pwErr');
   const pwSubmit = document.getElementById('pwSubmit');
   const pwGetKey = document.getElementById('pwGetKeyBtn');
+
+  let contentFromServer = false; // true after /api/content loaded or published
 
   function allStories(){
     if (contentFromServer) return sharedStories || [];
@@ -591,7 +550,6 @@
 
   function getUntil(){ try{ return parseInt(localStorage.getItem(KEY)||'0',10)||0; }catch(e){ return 0; } }
   function setUntil(t){ try{ localStorage.setItem(KEY, String(t)); }catch(e){} }
-  
   function fmt(ms){
     if(ms<0) ms=0;
     const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
@@ -676,21 +634,25 @@
     const ti = document.getElementById('brandTagInput');
     const li = document.getElementById('brandLogoInput');
     const ai = document.getElementById('brandAvatarInput');
-    if(ni && document.activeElement !== ni) ni.value = name;
+    if(ni && !ni.value) ni.value = name;
     if(ti && document.activeElement !== ti) ti.value = tag;
     if(li && document.activeElement !== li) li.value = logo;
     if(ai && document.activeElement !== ai) ai.value = sharedBrand.avatar || '';
   }
 
-  function renderAbout(){
+    function renderAbout(){
     const deck = document.getElementById('aboutDeck');
     if(!deck) return;
     const slides = sharedAbout && sharedAbout.length ? sharedAbout : DEFAULT_ABOUT;
     deck.innerHTML = slides.map(s => {
       const bullets = (s.bullets || []).map(b => `<li>${String(b).replace(/</g,'')}</li>`).join('');
+      const img = (s.image && /^https?:\/\//i.test(s.image))
+        ? `<img class="about-img no-save" src="${String(s.image).replace(/"/g,'')}" alt="" draggable="false"/>`
+        : '';
       return `<article class="about-slide">
         <span class="badge">${(s.badge||'').replace(/</g,'')}</span>
         <h2>${(s.title||'').replace(/</g,'')}</h2>
+        ${img}
         <p>${(s.body||'').replace(/</g,'')}</p>
         <div class="about-card"><ul>${bullets}</ul></div>
       </article>`;
@@ -703,10 +665,12 @@
     const slides = sharedAbout && sharedAbout.length ? sharedAbout : DEFAULT_ABOUT;
     box.innerHTML = slides.map((s, i) => `
       <div style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px">
-        <label>Slide ${i+1} Badge</label>
+        <label>Slide ${i+1} badge</label>
         <input type="text" data-ab="badge" data-i="${i}" value="${(s.badge||'').replace(/"/g,'&quot;')}"/>
         <label>Title</label>
         <input type="text" data-ab="title" data-i="${i}" value="${(s.title||'').replace(/"/g,'&quot;')}"/>
+        <label>Image link (optional https://…)</label>
+        <input type="url" data-ab="image" data-i="${i}" value="${(s.image||'').replace(/"/g,'&quot;')}" placeholder="https://… image URL"/>
         <label>Body</label>
         <textarea data-ab="body" data-i="${i}">${(s.body||'').replace(/</g,'&lt;')}</textarea>
         <label>Bullets (one per line)</label>
@@ -715,14 +679,16 @@
   }
 
   function readAboutFromEditor(){
-    return [0,1,2].map(i => {
+    const slides = [0,1,2].map(i => {
       const badge = (document.querySelector(`[data-ab="badge"][data-i="${i}"]`)||{}).value || '';
       const title = (document.querySelector(`[data-ab="title"][data-i="${i}"]`)||{}).value || '';
       const body = (document.querySelector(`[data-ab="body"][data-i="${i}"]`)||{}).value || '';
+      const image = ((document.querySelector(`[data-ab="image"][data-i="${i}"]`)||{}).value || '').trim();
       const bulletsRaw = (document.querySelector(`[data-ab="bullets"][data-i="${i}"]`)||{}).value || '';
       const bullets = bulletsRaw.split('\n').map(x=>x.trim()).filter(Boolean);
-      return { badge, title, body, bullets };
+      return { badge, title, body, image, bullets };
     });
+    return slides;
   }
 
   function renderStories(){
@@ -735,7 +701,7 @@
       btn.className='story';
       const av = st.media
         ? `<img src="${String(st.media).replace(/"/g,'')}" alt="" draggable="false"/>`
-        : `<div class="av">${(st.name||'G')[0]}</div>`;
+        : `<div class="av">${(st.name||'L')[0]}</div>`;
       btn.innerHTML = `<div class="ring ${seen.has(st.id)?'seen':''}"><div class="ring-inner">${av}</div></div><span>${st.name||'Story'}</span>`;
       btn.addEventListener('click', ()=> openStory(i));
       storiesRow.appendChild(btn);
@@ -755,7 +721,7 @@
       el.dataset.id = p.id;
       el.innerHTML = `
         <div class="post-head">
-          <div class="post-av">${(p.avatar||sharedBrand.avatar) ? '<img src="'+String(p.avatar||sharedBrand.avatar).replace(/"/g,'')+'" alt="" draggable="false"/>' : (p.user||'G')[0].toUpperCase()}</div>
+          <div class="post-av">${(p.avatar||sharedBrand.avatar) ? '<img src="'+String(p.avatar||sharedBrand.avatar).replace(/"/g,'')+'" alt="" draggable="false"/>' : (p.user||'L')[0].toUpperCase()}</div>
           <div class="post-meta"><strong>${p.user||'lumina'}</strong><small>${p.place||''}</small></div>
         </div>
         ${mediaBlock(p.media, p.gradient, p.title)}
@@ -766,7 +732,6 @@
         <div class="likes"><span class="like-count">${p.likes||0}</span> likes</div>
         <div class="caption"><strong>${p.user||''}</strong> ${p.caption||''}</div>
         <div class="time">${p.time||'JUST NOW'}</div>`;
-      
       const likeBtn = el.querySelector('.like');
       likeBtn.addEventListener('click', ()=>{
         if(feed.classList.contains('locked')){ openUnlock(); return; }
@@ -783,6 +748,10 @@
         }catch(e){}
       });
       postsEl.appendChild(el);
+    });
+    document.querySelectorAll('.post-media, .post-media img, .post-media video').forEach(node=>{
+      node.addEventListener('contextmenu', e=> e.preventDefault());
+      node.addEventListener('dragstart', e=> e.preventDefault());
     });
   }
 
@@ -836,8 +805,10 @@
       const d = await r.json();
       if(d && d.ok && d.content){
         contentFromServer = true;
-        sharedPosts = Array.isArray(d.content.posts) ? d.content.posts : [];
-        sharedStories = Array.isArray(d.content.stories) ? d.content.stories : [];
+        if(Array.isArray(d.content.posts)) sharedPosts = d.content.posts;
+        else sharedPosts = [];
+        if(Array.isArray(d.content.stories)) sharedStories = d.content.stories;
+        else sharedStories = [];
         if(Array.isArray(d.content.about) && d.content.about.length) sharedAbout = d.content.about;
         if(d.content.brand && typeof d.content.brand === 'object'){
           sharedBrand = {
@@ -852,7 +823,7 @@
     refreshAll();
   }
 
-  /* Story Viewer Engine */
+  /* Story viewer */
   let storyIndex = 0, storyTimer = null;
   const viewer = document.getElementById('storyViewer');
   function openStory(i){
@@ -869,7 +840,7 @@
     const prog = document.getElementById('viewerProgress');
     prog.innerHTML = STORIES.map((_,idx)=>`<i><b style="width:${idx<storyIndex?100:0}%"></b></i>`).join('');
     document.getElementById('viewerName').textContent = st.name||'Lumina';
-    document.getElementById('viewerAv').textContent = (st.name||'G')[0];
+    document.getElementById('viewerAv').textContent = (st.name||'L')[0];
     let body = `<h3>${st.title||''}</h3><p>${st.body||''}</p>`;
     if(st.media){
       body = `<div class="no-save media-protect" style="margin-bottom:12px;border-radius:12px;overflow:hidden">
@@ -902,7 +873,7 @@
     else { storyIndex = Math.max(0, storyIndex-1); showStoryFrame(); }
   });
 
-  /* Tabs Routing */
+  /* Tabs */
   document.querySelectorAll('.tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -915,7 +886,7 @@
     });
   });
 
-  /* Passcode Modal */
+  /* Unlock */
   function openUnlock(){ modal.classList.add('show'); pwInput.focus(); }
   function closeUnlock(){ modal.classList.remove('show'); }
   document.getElementById('btnOpenUnlock').onclick = openUnlock;
@@ -943,7 +914,7 @@
         try { d = JSON.parse(text); } catch(e) {}
         if(!r.ok || !d){
           pwErr.textContent = r.status === 404
-            ? 'API missing (404). Server api/ verify logic setup check karein.'
+            ? 'API missing (404). api/ folder upload karke Redeploy karein.'
             : ('Server error ' + r.status);
           return;
         }
@@ -989,7 +960,7 @@
       });
   });
 
-  /* Admin Operations */
+  /* Admin */
   const adminPin = document.getElementById('adminPin');
   const adminErr = document.getElementById('adminErr');
   const adminLoginBox = document.getElementById('adminLoginBox');
@@ -1023,13 +994,13 @@
         try { d = JSON.parse(text); } catch(e) {}
         if(!r.ok || !d){
           adminErr.textContent = r.status === 404
-            ? 'API missing (404). api/admin.js check karein.'
+            ? 'API missing (404). api/admin.js deploy karein.'
             : ('Server error ' + r.status);
           return;
         }
         if(d.ok && d.until){
           try{ localStorage.setItem(ADMIN_KEY, String(d.until)); }catch(e){}
-          adminPinSession = pinVal;
+          adminPinSession = pinVal; // keep for Publish (same session)
           adminPin.value='';
           showAdmin();
         } else adminErr.textContent = d.error || 'Login failed';
@@ -1053,7 +1024,7 @@
     if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start ho'); return; }
     if(avatar && !/^https?:\/\//i.test(avatar)){ alert('Avatar link https:// se start ho'); return; }
     if(!sharedPosts) sharedPosts = [];
-    contentFromServer = true;
+    contentFromServer = true; // drafts are real list now, not demo defaults
     sharedPosts.unshift({
       id: 'c'+Date.now(), user, avatar, place: place||'Feed', title: title||'Post', caption,
       media, likes: 0, time: 'JUST NOW', gradient: 'linear-gradient(160deg,#5b2d8e,#1a0a2e)'
@@ -1090,7 +1061,7 @@
   };
 
   document.getElementById('adminClearCustom').onclick = ()=>{
-    if(!confirm('Sari custom posts/stories hataein?')) return;
+    if(!confirm('Sari custom posts/stories hataein? (Publish ke baad sab devices se)')) return;
     sharedPosts = [];
     sharedStories = [];
     refreshAll();
@@ -1100,7 +1071,8 @@
     const err = document.getElementById('publishErr');
     err.textContent = '';
     if(!adminPinSession){
-      const pin = prompt('Publish ke liye Admin PIN enter karein:');
+      // ask pin again for publish
+      const pin = prompt('Publish ke liye Admin PIN dubara enter karein:');
       if(!pin){ err.textContent = 'PIN required'; return; }
       adminPinSession = pin;
     }
@@ -1134,6 +1106,7 @@
           if(r.status === 401) adminPinSession = '';
           return;
         }
+        // Trust server response + reload
         if(d.content){
           contentFromServer = true;
           sharedPosts = Array.isArray(d.content.posts) ? d.content.posts : [];
@@ -1142,8 +1115,21 @@
           if(d.content.brand) sharedBrand = d.content.brand;
         }
         refreshAll();
+        const pc = (sharedPosts||[]).length;
+        const sc = (sharedStories||[]).length;
         err.style.color = '#86efac';
-        err.textContent = 'Published OK · live on all devices';
+        err.textContent = 'Published OK · posts=' + pc + ' stories=' + sc + ' · doosra phone refresh kare';
+        // verify round-trip
+        return fetch('/api/content?t=' + Date.now(), {cache:'no-store'}).then(r2=>r2.json()).then(d2=>{
+          if(d2 && d2.content){
+            const p2 = (d2.content.posts||[]).length;
+            err.textContent = 'Server confirm · posts=' + p2 + ' stories=' + (d2.content.stories||[]).length;
+            contentFromServer = true;
+            sharedPosts = d2.content.posts || [];
+            sharedStories = d2.content.stories || [];
+            refreshAll();
+          }
+        }).catch(()=>{});
       })
       .catch(e=>{ err.textContent = 'Network: ' + (e.message||''); })
       .finally(()=>{ btn.disabled=false; btn.textContent='🌐 Publish to all users'; });
@@ -1161,14 +1147,17 @@
     renderPosts();
     alert('Profile applied on screen. Publish to all users se sab devices par jayega.');
   };
-
   const btnUS = document.getElementById('btnUnlockStories');
   if(btnUS) btnUS.onclick = openUnlock;
 
-  /* Initialization */
+    document.addEventListener('contextmenu', function(e){
+    if(e.target.closest('.post-media, .no-save, .viewer-body')) e.preventDefault();
+  }, {capture:true});
+
+  /* init */
   applyUnlockState();
   showAdmin();
-  loadSharedContent();
+  loadSharedContent(); // server se posts/stories/brand — refresh par bhi
 })();
 </script>
 </body>
