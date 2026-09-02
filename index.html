@@ -6,7 +6,22 @@
 <title>Lumina — Study Feed</title>
 <meta name="theme-color" content="#12081C"/>
 <style>
-  :root{
+  :root, [data-theme="gold"]{
+    --bg:#1a0f08;
+    --panel:rgba(88,55,20,.72);
+    --panel-solid:#2a1a0c;
+    --line:rgba(255,235,151,.28);
+    --text:#fff8e7;
+    --muted:#d4c4a0;
+    --accent:#FFEB97;
+    --accent2:#e8c96a;
+    --pink:#c9a227;
+    --danger:#f87171;
+    --glass:blur(18px) saturate(1.15);
+    --radius:18px;
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  [data-theme="purple"]{
     --bg:#12081C;
     --panel:rgba(36,18,56,.72);
     --panel-solid:#1c0f2e;
@@ -16,10 +31,39 @@
     --accent:#C4A1FF;
     --accent2:#9b6dff;
     --pink:#ff7ad9;
-    --danger:#f87171;
-    --glass:blur(18px) saturate(1.2);
-    --radius:18px;
-    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  [data-theme="emerald"]{
+    --bg:#06140f;
+    --panel:rgba(16,48,36,.72);
+    --panel-solid:#0c2418;
+    --line:rgba(110,231,183,.25);
+    --text:#ecfdf5;
+    --muted:#a7f3d0;
+    --accent:#6ee7b7;
+    --accent2:#34d399;
+    --pink:#10b981;
+  }
+  [data-theme="ocean"]{
+    --bg:#061018;
+    --panel:rgba(15,40,60,.72);
+    --panel-solid:#0c1e2e;
+    --line:rgba(125,211,252,.25);
+    --text:#e0f2fe;
+    --muted:#7dd3fc;
+    --accent:#7dd3fc;
+    --accent2:#38bdf8;
+    --pink:#0ea5e9;
+  }
+  [data-theme="rose"]{
+    --bg:#180810;
+    --panel:rgba(60,20,36,.72);
+    --panel-solid:#2a0f1a;
+    --line:rgba(251,113,133,.25);
+    --text:#fff1f2;
+    --muted:#fda4af;
+    --accent:#fb7185;
+    --accent2:#f43f5e;
+    --pink:#e11d48;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;background:var(--bg);color:var(--text);
@@ -33,7 +77,7 @@
   .app{
     max-width:480px;margin:0 auto;height:100%;
     display:flex;flex-direction:column;
-    background:radial-gradient(120% 80% at 50% -10%,#2a1548 0%,var(--bg) 55%);
+    background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb, var(--accent) 28%, var(--bg)) 0%,var(--bg) 55%);
     position:relative;overflow:hidden;
   }
 
@@ -380,6 +424,20 @@
           </div>
 
           <div class="admin-box" style="margin-top:14px">
+            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🎨 Theme / Color</label>
+            <label>Choose theme (live preview)</label>
+            <select id="themeSelect" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25);margin-bottom:10px">
+              <option value="gold">Gold / Brown (default)</option>
+              <option value="purple">Purple Glass</option>
+              <option value="emerald">Emerald Green</option>
+              <option value="ocean">Ocean Blue</option>
+              <option value="rose">Rose Pink</option>
+            </select>
+            <button class="btn btn-ghost" type="button" id="themeApplyBtn" style="width:100%">Apply theme</button>
+            <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4">Publish to all users दबाने पर सब devices पर यही theme लग जाएगा।</p>
+          </div>
+
+          <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Post (link only)</label>
             <label>Username</label>
             <input type="text" id="apUser" placeholder="Sunita" value="Sunita"/>
@@ -640,7 +698,27 @@
     if(ai && document.activeElement !== ai) ai.value = sharedBrand.avatar || '';
   }
 
-    function renderAbout(){
+  
+  /* Theme */
+  const THEME_KEY = 'lumina_theme';
+  function applyTheme(name){
+    const t = name || 'gold';
+    document.documentElement.setAttribute('data-theme', t);
+    try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+    const sel = document.getElementById('themeSelect');
+    if(sel) sel.value = t;
+    if(sharedBrand) sharedBrand.theme = t;
+  }
+  function loadTheme(){
+    let t = 'gold';
+    try{
+      if(sharedBrand && sharedBrand.theme) t = sharedBrand.theme;
+      else t = localStorage.getItem(THEME_KEY) || 'gold';
+    }catch(e){}
+    applyTheme(t);
+  }
+
+  function renderAbout(){
     const deck = document.getElementById('aboutDeck');
     if(!deck) return;
     const slides = sharedAbout && sharedAbout.length ? sharedAbout : DEFAULT_ABOUT;
@@ -815,8 +893,10 @@
             name: d.content.brand.name || sharedBrand.name,
             tag: d.content.brand.tag || sharedBrand.tag,
             logo: d.content.brand.logo || '',
-            avatar: d.content.brand.avatar || ''
+            avatar: d.content.brand.avatar || '',
+            theme: d.content.brand.theme || sharedBrand.theme || 'gold'
           };
+          if(sharedBrand.theme) applyTheme(sharedBrand.theme);
         }
       }
     }catch(e){ console.warn('content load', e); }
@@ -1081,7 +1161,8 @@
       name: (document.getElementById('brandNameInput')&&document.getElementById('brandNameInput').value)||sharedBrand.name,
       tag: (document.getElementById('brandTagInput')&&document.getElementById('brandTagInput').value)||sharedBrand.tag,
       logo: (document.getElementById('brandLogoInput')&&document.getElementById('brandLogoInput').value)||'',
-      avatar: (document.getElementById('brandAvatarInput')&&document.getElementById('brandAvatarInput').value)||''
+      avatar: (document.getElementById('brandAvatarInput')&&document.getElementById('brandAvatarInput').value)||'',
+      theme: (document.getElementById('themeSelect')&&document.getElementById('themeSelect').value)||sharedBrand.theme||'gold'
     };
     const btn = document.getElementById('adminPublishAll');
     btn.disabled = true;
@@ -1141,9 +1222,11 @@
       name: (document.getElementById('brandNameInput')&&document.getElementById('brandNameInput').value)||'GMAX Hub',
       tag: (document.getElementById('brandTagInput')&&document.getElementById('brandTagInput').value)||'',
       logo: (document.getElementById('brandLogoInput')&&document.getElementById('brandLogoInput').value)||'',
-      avatar: (document.getElementById('brandAvatarInput')&&document.getElementById('brandAvatarInput').value)||''
+      avatar: (document.getElementById('brandAvatarInput')&&document.getElementById('brandAvatarInput').value)||'',
+      theme: (document.getElementById('themeSelect')&&document.getElementById('themeSelect').value)||'gold'
     };
     applyBrand();
+    applyTheme(sharedBrand.theme);
     renderPosts();
     alert('Profile applied on screen. Publish to all users se sab devices par jayega.');
   };
@@ -1154,7 +1237,18 @@
     if(e.target.closest('.post-media, .no-save, .viewer-body')) e.preventDefault();
   }, {capture:true});
 
+  /* Theme button */
+  const themeBtn = document.getElementById('themeApplyBtn');
+  if(themeBtn) themeBtn.onclick = ()=>{
+    const sel = document.getElementById('themeSelect');
+    applyTheme(sel ? sel.value : 'gold');
+    alert('Theme applied. Publish to all users से सबको मिलेगा।');
+  };
+  const themeSel = document.getElementById('themeSelect');
+  if(themeSel) themeSel.onchange = ()=> applyTheme(themeSel.value);
+
   /* init */
+  loadTheme();
   applyUnlockState();
   showAdmin();
   loadSharedContent(); // server se posts/stories/brand — refresh par bhi
