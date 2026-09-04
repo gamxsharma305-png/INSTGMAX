@@ -289,21 +289,50 @@
   .stat span{font-size:11px;color:var(--muted)}
 
   /* Bottom nav — Instagram style */
+  /* ===== ARC-style animated tab bar ===== */
   .tabbar{
-    position:absolute;left:0;right:0;bottom:0;z-index:10;
+    position:absolute;left:12px;right:12px;bottom:calc(10px + var(--safe-b));
+    z-index:10;
     display:flex;justify-content:space-around;align-items:center;
-    padding:8px 6px calc(10px + var(--safe-b));
-    border-top:1px solid var(--line);
-    background:rgba(18,8,28,.82);backdrop-filter:var(--glass)
+    padding:8px 6px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:color-mix(in srgb, var(--panel-solid) 88%, transparent);
+    backdrop-filter:blur(18px) saturate(1.2);
+    box-shadow:0 12px 40px rgba(0,0,0,.45);
+    overflow:hidden;
+  }
+  .tabbar .tab-indicator{
+    position:absolute;
+    top:6px;bottom:6px;
+    width:72px;
+    left:0;
+    border-radius:999px;
+    background:color-mix(in srgb, var(--accent) 14%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent),
+      0 0 22px color-mix(in srgb, var(--accent) 40%, transparent),
+      inset 0 0 14px color-mix(in srgb, var(--accent) 20%, transparent);
+    pointer-events:none;
+    transition:left .48s cubic-bezier(.22,1.15,.36,1), width .35s ease;
+    z-index:0;
   }
   .tab{
+    position:relative;z-index:1;
     flex:1;border:0;background:none;color:var(--muted);cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:600;
-    padding:6px
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-size:10px;font-weight:600;padding:8px 4px;
+    transition:color .25s ease;
   }
   .tab.active{color:var(--accent)}
-  .tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7}
-  .tab.active svg{fill:rgba(196,161,255,.2)}
+  .tab svg{
+    width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;
+    transition:filter .25s ease, transform .25s ease;
+  }
+  .tab.active svg{
+    filter:drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 70%, transparent));
+    transform:translateY(-1px);
+  }
 
   /* Story viewer fullscreen */
   .viewer{
@@ -351,6 +380,17 @@
     .app{height:min(900px,100vh);border-radius:24px;border:1px solid var(--line);
       box-shadow:0 30px 80px rgba(0,0,0,.5)}
   }
+
+  .unlock-wall{
+    margin:8px 14px 40px;padding:28px 18px;border-radius:var(--radius);
+    background:var(--panel);border:1px solid var(--line);backdrop-filter:var(--glass);
+    text-align:center;
+  }
+  .unlock-wall h3{font-size:17px;margin-bottom:8px;color:var(--accent)}
+  .unlock-wall p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
+  .feed.locked{ /* preview only 2 posts */
+  }
+
 </style>
 </head>
 <body>
@@ -380,8 +420,8 @@
       </div>
       <div class="feed locked" id="feed">
         <div class="lock-banner">
-          <h3>🔒 Posts are blurred</h3>
-          <p>Enter your 12-digit code to unlock the full feed for <b>36 hours</b>. First get a key via the secure link.</p>
+          <h3>🔒 Please unlock your password</h3>
+          <p>Sirf 2 posts preview. Poora feed dekhne ke liye <b>12-digit code</b> se unlock karein (36 hours).</p>
           <button class="btn btn-primary" type="button" id="btnOpenUnlock">Start · Unlock feed</button>
         </div>
         <div id="posts"></div>
@@ -490,18 +530,19 @@
     </section>
   </div>
 
-  <nav class="tabbar">
+  <nav class="tabbar" id="tabbar">
+    <div class="tab-indicator" id="tabIndicator"></div>
     <button class="tab active" data-tab="home" type="button">
       <svg viewBox="0 0 24 24"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"/></svg>
-      Home
+      <span>Home</span>
     </button>
     <button class="tab" data-tab="about" type="button">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 19c1.5-3.5 4-5 7-5s5.5 1.5 7 5"/></svg>
-      About
+      <span>About</span>
     </button>
     <button class="tab" data-tab="admin" type="button">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-      Admin
+      <span>Admin</span>
     </button>
   </nav>
 </div>
@@ -616,6 +657,14 @@
   }
 
   let tick=null;
+  
+  function isUnlockedNow(){
+    try{
+      const until = parseInt(localStorage.getItem('lumina_unlock_until')||'0',10)||0;
+      return until > Date.now();
+    }catch(e){ return false; }
+  }
+
   function applyUnlockState(){
     const until = getUntil();
     const ok = until > Date.now();
@@ -633,6 +682,7 @@
           try{ localStorage.removeItem(KEY);}catch(e){}
           feed.classList.add('locked');
           if(tick) clearInterval(tick);
+          try{ renderPosts(); renderStories(); }catch(e){}
           return;
         }
         timerVal.textContent = fmt(left);
@@ -640,6 +690,8 @@
       step();
       tick=setInterval(step,1000);
     } else timerChip.classList.remove('show');
+  
+    try{ renderPosts(); renderStories(); }catch(e){}
   }
 
   function getSeen(){
@@ -792,8 +844,13 @@
 
   function renderPosts(){
     const POSTS = allPosts();
+    const locked = feed.classList.contains('locked') || !isUnlockedNow();
     postsEl.innerHTML = '';
-    POSTS.forEach(p=>{
+
+    // Locked: only first 2 posts as preview
+    const list = locked ? POSTS.slice(0, 2) : POSTS;
+
+    list.forEach(p=>{
       const el = document.createElement('article');
       el.className='post';
       el.dataset.id = p.id;
@@ -827,6 +884,23 @@
       });
       postsEl.appendChild(el);
     });
+
+    // After 2 posts when locked → big unlock wall
+    if(locked){
+      const wall = document.createElement('div');
+      wall.className = 'unlock-wall';
+      wall.innerHTML = `
+        <div class="unlock-wall-inner">
+          <div style="font-size:32px;margin-bottom:8px">🔒</div>
+          <h3>Please unlock your password</h3>
+          <p>Aap ne 2 posts dekh liye. Poora feed, stories aur media dekhne ke liye 12-digit code se unlock karein.</p>
+          <button class="btn btn-primary" type="button" id="btnWallUnlock">Unlock now</button>
+        </div>`;
+      postsEl.appendChild(wall);
+      const bw = wall.querySelector('#btnWallUnlock');
+      if(bw) bw.onclick = ()=> openUnlock();
+    }
+
     document.querySelectorAll('.post-media, .post-media img, .post-media video').forEach(node=>{
       node.addEventListener('contextmenu', e=> e.preventDefault());
       node.addEventListener('dragstart', e=> e.preventDefault());
@@ -953,18 +1027,56 @@
     else { storyIndex = Math.max(0, storyIndex-1); showStoryFrame(); }
   });
 
-  /* Tabs */
+  
+  /* Soft UI click sound (no external file) */
+  let _audioCtx = null;
+  function playClickSound(){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return;
+      if(!_audioCtx) _audioCtx = new AC();
+      if(_audioCtx.state === 'suspended') _audioCtx.resume();
+      const t0 = _audioCtx.currentTime;
+      const o = _audioCtx.createOscillator();
+      const g = _audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(880, t0);
+      o.frequency.exponentialRampToValueAtTime(420, t0 + 0.06);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
+      o.connect(g); g.connect(_audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.1);
+    }catch(e){}
+  }
+
+  /* Tabs + ARC indicator */
+  function moveTabIndicator(activeBtn){
+    const bar = document.getElementById('tabbar');
+    const ind = document.getElementById('tabIndicator');
+    if(!bar || !ind || !activeBtn) return;
+    const barRect = bar.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    ind.style.width = btnRect.width + 'px';
+    ind.style.left = (btnRect.left - barRect.left) + 'px';
+  }
   document.querySelectorAll('.tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
+      playClickSound();
+      moveTabIndicator(tab);
       const name = tab.getAttribute('data-tab');
       document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
       const map = { home:'screenHome', about:'screenAbout', admin:'screenAdmin' };
-      document.getElementById(map[name]).classList.add('active');
+      const el = document.getElementById(map[name]);
+      if(el) el.classList.add('active');
       if(name==='admin') showAdmin();
     });
   });
+  window.addEventListener('load', ()=> moveTabIndicator(document.querySelector('.tab.active')));
+  window.addEventListener('resize', ()=> moveTabIndicator(document.querySelector('.tab.active')));
+  setTimeout(()=> moveTabIndicator(document.querySelector('.tab.active')), 50);
 
   /* Unlock */
   function openUnlock(){ modal.classList.add('show'); pwInput.focus(); }
@@ -1246,6 +1358,11 @@
   };
   const themeSel = document.getElementById('themeSelect');
   if(themeSel) themeSel.onchange = ()=> applyTheme(themeSel.value);
+
+  
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.tab, .btn, .icon-btn, .act, .story')) playClickSound();
+  }, true);
 
   /* init */
   loadTheme();
