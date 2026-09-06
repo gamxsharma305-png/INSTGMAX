@@ -391,7 +391,93 @@
   .feed.locked{ /* preview only 2 posts */
   }
 
+
+  /* ===== Profile header (Instagram-style) ===== */
+  .profile-wrap{
+    padding:0 0 6px;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, var(--bg)) 0%, var(--bg) 70%);
+  }
+  .profile-cover{
+    height:110px;
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 35%, #1a0f08), var(--bg));
+    background-size:cover;background-position:center;position:relative;overflow:hidden;
+  }
+  .profile-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .profile-top-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 14px 0;position:relative;z-index:2;
+  }
+  .profile-brand-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:999px;
+    background:rgba(0,0,0,.35);border:1px solid var(--line);
+    font-size:11px;font-weight:700;letter-spacing:.05em;backdrop-filter:blur(8px);
+  }
+  .profile-login-btn{
+    border:1px solid var(--line);background:rgba(0,0,0,.3);
+    color:var(--text);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;
+    backdrop-filter:blur(8px);
+  }
+  .profile-main{
+    display:flex;flex-direction:column;align-items:center;
+    margin-top:-44px;padding:0 16px 10px;text-align:center;
+  }
+  .profile-avatar-ring{
+    width:88px;height:88px;border-radius:50%;padding:3px;
+    background:linear-gradient(135deg, var(--accent), var(--accent2), var(--pink));
+    box-shadow:0 8px 28px rgba(0,0,0,.4);
+  }
+  .profile-avatar-ring img{
+    width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;border:3px solid var(--bg);
+  }
+  .profile-avatar-fallback{
+    width:100%;height:100%;border-radius:50%;border:3px solid var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    font-size:30px;font-weight:800;color:var(--accent);background:var(--panel-solid);
+  }
+  .profile-name{
+    margin-top:10px;font-size:20px;font-weight:800;
+    display:flex;align-items:center;gap:6px;justify-content:center;
+  }
+  .profile-name .verified{
+    width:18px;height:18px;border-radius:50%;background:#3b82f6;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:10px;color:#fff;font-weight:900;line-height:1;
+  }
+  .profile-handle{font-size:13px;color:var(--muted);margin-top:2px}
+  .profile-sub-btn{
+    margin-top:12px;width:min(340px,100%);
+    border:0;border-radius:999px;padding:13px 18px;
+    font-size:14px;font-weight:700;cursor:pointer;color:#1a0f08;
+    background:linear-gradient(90deg, var(--accent), var(--accent2));
+    box-shadow:0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .profile-sub-btn:disabled{opacity:.55;cursor:wait}
+  .profile-bio{
+    margin-top:12px;font-size:13px;color:var(--muted);line-height:1.5;max-width:360px;
+  }
+  .profile-stats{
+    margin-top:14px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;
+    font-size:13px;color:var(--muted);
+  }
+  .profile-stats b{color:var(--text);font-weight:800}
+  .profile-section-tabs{
+    margin:12px 8px 0;display:flex;justify-content:space-around;
+    border-bottom:1px solid var(--line);padding-bottom:6px;
+  }
+  .profile-section-tabs button{
+    flex:1;border:0;background:none;color:var(--muted);
+    font-size:11px;font-weight:600;padding:8px 2px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .profile-section-tabs button.active{color:var(--accent)}
+  .profile-section-tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6}
+  #monthPayMsg{font-size:12px;margin:8px 14px 0;text-align:center;min-height:16px;color:var(--muted);line-height:1.4}
+  /* hide bulky top brand on home - keep timer row thin */
+  .topbar{padding:6px 12px}
+
 </style>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -414,14 +500,62 @@
   <div class="screens">
     <!-- HOME / FEED -->
     <section class="screen active" id="screenHome">
+      <!-- PROFILE (Instagram-style) -->
+      <div class="profile-wrap" id="profileWrap">
+        <div class="profile-cover" id="profileCover"></div>
+        <div class="profile-top-row">
+          <div class="profile-brand-pill" id="brandPill">GMAX HUB</div>
+          <button type="button" class="profile-login-btn" id="btnProfileUnlock">Unlock</button>
+        </div>
+        <div class="profile-main">
+          <div class="profile-avatar-ring" id="profileAvatarRing">
+            <div class="profile-avatar-fallback" id="profileAvatarFallback">G</div>
+          </div>
+          <div class="profile-name">
+            <span id="profileName">GMAX Hub</span>
+            <span class="verified" title="Verified">✓</span>
+          </div>
+          <div class="profile-handle" id="profileHandle">@gmaxhub</div>
+          <button type="button" class="profile-sub-btn" id="btnBuyMonth">Subscribe for ₹ 199.00 / monthly</button>
+          <p id="monthPayMsg"></p>
+          <p class="profile-bio" id="profileBio">Instagram was just a sneak peek… The real deal is only here.<br/>Ready to see? 😉</p>
+          <div class="profile-stats">
+            <span><b id="statPosts">0</b> posts</span>
+            <span><b id="statFollowers">—</b> followers</span>
+            <span><b id="statSubs">—</b> subscribers</span>
+          </div>
+        </div>
+        <div class="profile-section-tabs">
+          <button type="button" class="active" data-sec="posts">
+            <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+            Posts
+          </button>
+          <button type="button" data-sec="photos">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5-9 9"/></svg>
+            Photos
+          </button>
+          <button type="button" data-sec="products">
+            <svg viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>
+            Products
+          </button>
+          <button type="button" data-sec="videos">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/></svg>
+            Videos
+          </button>
+        </div>
+      </div>
+
+      <!-- STORIES under profile -->
       <div class="stories-wrap locked" id="storiesWrap">
         <div class="stories" id="storiesRow"></div>
         <div class="stories-lock">🔒 Stories unlock ke baad<br/><button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock</button></div>
       </div>
+
+      <!-- FEED -->
       <div class="feed locked" id="feed">
         <div class="lock-banner">
           <h3>🔒 Please unlock your password</h3>
-          <p>Sirf 2 posts preview. Poora feed dekhne ke liye <b>12-digit code</b> se unlock karein (36 hours).</p>
+          <p>Sirf 2 posts preview. Poora feed dekhne ke liye <b>12-digit code</b> se unlock karein (36 hours) ya Subscribe ₹199 / month.</p>
           <button class="btn btn-primary" type="button" id="btnOpenUnlock">Start · Unlock feed</button>
         </div>
         <div id="posts"></div>
@@ -724,10 +858,11 @@
     </div>`;
   }
 
-  function applyBrand(){
+    function applyBrand(){
     const name = sharedBrand.name || 'GMAX Hub';
     const tag = sharedBrand.tag || 'Study feed · gated classroom';
     const logo = sharedBrand.logo || '';
+    const avatar = sharedBrand.avatar || '';
     const elName = document.getElementById('brandName');
     const elTag = document.getElementById('brandTag');
     const elLogo = document.getElementById('brandLogo');
@@ -740,18 +875,50 @@
         elLogo.textContent = (name[0]||'G').toUpperCase();
       }
     }
-    const ni = document.getElementById('brandNameInput');
-    const ti = document.getElementById('brandTagInput');
-    const li = document.getElementById('brandLogoInput');
-    const ai = document.getElementById('brandAvatarInput');
-    if(ni && !ni.value) ni.value = name;
-    if(ti && document.activeElement !== ti) ti.value = tag;
-    if(li && document.activeElement !== li) li.value = logo;
-    if(ai && document.activeElement !== ai) ai.value = sharedBrand.avatar || '';
+    applyProfileUI();
+  }
+  function applyProfileUI(){
+    const name = (sharedBrand && sharedBrand.name) || 'GMAX Hub';
+    const avatar = (sharedBrand && sharedBrand.avatar) || '';
+    const logo = (sharedBrand && sharedBrand.logo) || '';
+    const bio = (sharedBrand && sharedBrand.bio) || 'Instagram was just a sneak peek… The real deal is only here.\nReady to see? 😉';
+    const followers = (sharedBrand && sharedBrand.followers) || '—';
+    const subs = (sharedBrand && sharedBrand.subscribers) || '—';
+    const n = document.getElementById('profileName');
+    if(n) n.textContent = name;
+    const h = document.getElementById('profileHandle');
+    if(h) h.textContent = '@' + String(name).replace(/\s+/g,'').toLowerCase();
+    const pill = document.getElementById('brandPill');
+    if(pill) pill.textContent = String(name).toUpperCase();
+    const ring = document.getElementById('profileAvatarRing');
+    if(ring){
+      if(avatar && /^https?:\/\//i.test(avatar)){
+        ring.innerHTML = '<img src="'+String(avatar).replace(/"/g,'')+'" alt="" draggable="false"/>';
+      } else {
+        ring.innerHTML = '<div class="profile-avatar-fallback">'+(name[0]||'G').toUpperCase()+'</div>';
+      }
+    }
+    const cover = document.getElementById('profileCover');
+    if(cover){
+      if(logo && /^https?:\/\//i.test(logo)){
+        cover.innerHTML = '<img src="'+String(logo).replace(/"/g,'')+'" alt=""/>';
+      } else {
+        cover.innerHTML = '';
+      }
+    }
+    const bioEl = document.getElementById('profileBio');
+    if(bioEl) bioEl.innerHTML = String(bio).replace(/\n/g,'<br/>');
+    const sf = document.getElementById('statFollowers');
+    if(sf) sf.textContent = followers;
+    const ss = document.getElementById('statSubs');
+    if(ss) ss.textContent = subs;
+    const sp = document.getElementById('statPosts');
+    if(sp && typeof allPosts === 'function'){
+      try{ sp.textContent = String((allPosts()||[]).length); }catch(e){}
+    }
   }
 
   
-  /* Theme */
   const THEME_KEY = 'lumina_theme';
   function applyTheme(name){
     const t = name || 'gold';
@@ -905,6 +1072,10 @@
       node.addEventListener('contextmenu', e=> e.preventDefault());
       node.addEventListener('dragstart', e=> e.preventDefault());
     });
+    try{
+      const sp = document.getElementById('statPosts');
+      if(sp) sp.textContent = String((typeof allPosts==='function'?allPosts():[]).length);
+    }catch(e){}
   }
 
   function renderAdminList(){
@@ -1364,8 +1535,100 @@
     if(e.target.closest('.tab, .btn, .icon-btn, .act, .story')) playClickSound();
   }, true);
 
+  
+  /* Profile unlock */
+  document.getElementById('btnProfileUnlock')?.addEventListener('click', ()=>{
+    if(typeof openUnlock === 'function') openUnlock();
+  });
+
+  /* Section tabs UI only */
+  document.querySelectorAll('.profile-section-tabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.profile-section-tabs button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      playClickSound && playClickSound();
+    });
+  });
+
+  /* ₹199 Monthly — Razorpay */
+  function getDeviceId(){
+    try{
+      let id = localStorage.getItem('lumina_device_id');
+      if(!id){
+        id = ('D'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4)).toUpperCase();
+        localStorage.setItem('lumina_device_id', id);
+      }
+      return id;
+    }catch(e){ return 'WEBDEVICE0001'; }
+  }
+  document.getElementById('btnBuyMonth')?.addEventListener('click', async ()=>{
+    const msg = document.getElementById('monthPayMsg');
+    const btn = document.getElementById('btnBuyMonth');
+    if(msg){ msg.style.color=''; msg.textContent = 'Order ban raha hai…'; }
+    if(btn) btn.disabled = true;
+    try{
+      if(typeof Razorpay === 'undefined'){
+        if(msg) msg.textContent = 'Razorpay script load nahi hui. Net check karo.';
+        if(btn) btn.disabled = false;
+        return;
+      }
+      const deviceId = getDeviceId();
+      const r = await fetch('/api/create-order', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ deviceId })
+      });
+      const d = await r.json().catch(()=>({}));
+      if(!d.ok || !d.orderId){
+        if(msg) msg.textContent = d.error || 'Order fail — api/create-order + Razorpay env check karo';
+        if(btn) btn.disabled = false;
+        return;
+      }
+      const rzp = new Razorpay({
+        key: d.keyId,
+        amount: d.amount,
+        currency: d.currency || 'INR',
+        name: (sharedBrand && sharedBrand.name) || 'GMAX Hub',
+        description: '1 Month Pass · this device only',
+        order_id: d.orderId,
+        handler: async function(response){
+          if(msg) msg.textContent = 'Payment verify…';
+          const v = await fetch('/api/verify-payment', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              deviceId: deviceId
+            })
+          });
+          const out = await v.json().catch(()=>({}));
+          if(out.ok && out.code){
+            if(msg){
+              msg.style.color = '#86efac';
+              msg.innerHTML = 'Success! Code: <b style="letter-spacing:.12em">'+out.code+'</b><br/>Neeche Verify me dalo · 30 din · is phone only';
+            }
+            const inp = document.getElementById('pwInput');
+            if(inp) inp.value = out.code;
+            if(typeof openUnlock === 'function') openUnlock();
+          } else {
+            if(msg) msg.textContent = out.error || 'Verify fail';
+          }
+          if(btn) btn.disabled = false;
+        },
+        modal: { ondismiss: function(){ if(btn) btn.disabled = false; if(msg) msg.textContent=''; } }
+      });
+      rzp.open();
+    }catch(e){
+      if(msg) msg.textContent = 'Error: '+(e.message||'network');
+      if(btn) btn.disabled = false;
+    }
+  });
+
   /* init */
   loadTheme();
+  try{ applyProfileUI(); }catch(e){}
   applyUnlockState();
   showAdmin();
   loadSharedContent(); // server se posts/stories/brand — refresh par bhi
