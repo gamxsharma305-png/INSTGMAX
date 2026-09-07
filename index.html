@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>Lumina — Study Feed</title>
+<title>GMAX Hub</title>
 <meta name="theme-color" content="#12081C"/>
 <style>
   :root, [data-theme="gold"]{
@@ -395,17 +395,21 @@
   /* ===== Profile header (Instagram-style) ===== */
   .profile-wrap{
     padding:0 0 6px;
-    background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, var(--bg)) 0%, var(--bg) 70%);
-  }
+    background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, var(--bg)) 0%, var(--bg) 70%);position:relative;isolation:isolate;}
   .profile-cover{
     height:110px;
     background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 35%, #1a0f08), var(--bg));
-    background-size:cover;background-position:center;position:relative;overflow:hidden;
+    background-size:cover;background-position:center;
+    position:relative;overflow:hidden;
+    z-index:0;
   }
-  .profile-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .profile-cover img{
+    width:100%;height:100%;object-fit:cover;display:block;
+    position:relative;z-index:0;pointer-events:none;
+  }
   .profile-top-row{
     display:flex;justify-content:space-between;align-items:center;
-    padding:10px 14px 0;position:relative;z-index:2;
+    padding:10px 14px 0;position:relative;z-index:3;
   }
   .profile-brand-pill{
     display:inline-flex;align-items:center;gap:6px;
@@ -420,13 +424,11 @@
   }
   .profile-main{
     display:flex;flex-direction:column;align-items:center;
-    margin-top:-44px;padding:0 16px 10px;text-align:center;
-  }
+    margin-top:-44px;padding:0 16px 10px;text-align:center;position:relative;z-index:4;}
   .profile-avatar-ring{
     width:88px;height:88px;border-radius:50%;padding:3px;
     background:linear-gradient(135deg, var(--accent), var(--accent2), var(--pink));
-    box-shadow:0 8px 28px rgba(0,0,0,.4);
-  }
+    box-shadow:0 8px 28px rgba(0,0,0,.4);position:relative;z-index:5;}
   .profile-avatar-ring img{
     width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;border:3px solid var(--bg);
   }
@@ -476,6 +478,19 @@
   /* hide bulky top brand on home - keep timer row thin */
   .topbar{padding:6px 12px}
 
+
+  /* stack fix: cover always behind avatar */
+  .profile-wrap{ position:relative; isolation:isolate; overflow:visible; }
+  .profile-cover{
+    position:absolute !important; left:0; right:0; top:0;
+    height:120px !important; z-index:0 !important;
+    pointer-events:none;
+  }
+  .profile-cover img{ z-index:0 !important; }
+  .profile-top-row{ position:relative; z-index:5 !important; padding-top:12px; }
+  .profile-main{ position:relative; z-index:5 !important; margin-top:56px !important; }
+  .profile-avatar-ring{ position:relative; z-index:6 !important; }
+
 </style>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
@@ -486,7 +501,7 @@
       <div class="logo" id="brandLogo">L</div>
       <div>
         <h1 id="brandName">GMAX Hub</h1>
-        <p id="brandTag">Study feed · gated classroom</p>
+        <p id="brandTag">GMAX Hub · gated feed</p>
       </div>
     </div>
     <div class="top-actions">
@@ -589,7 +604,7 @@
             <label>Site name</label>
             <input type="text" id="brandNameInput" placeholder="GMAX Hub" value="GMAX Hub"/>
             <label>Tagline</label>
-            <input type="text" id="brandTagInput" placeholder="Study feed · gated classroom"/>
+            <input type="text" id="brandTagInput" placeholder="GMAX Hub · gated feed"/>
             <label>Main logo image link (top left)</label>
             <input type="url" id="brandLogoInput" placeholder="https://… image URL"/>
             <label>Default post avatar image link</label>
@@ -611,7 +626,24 @@
             <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4">Publish to all users दबाने पर सब devices पर यही theme लग जाएगा।</p>
           </div>
 
+          
           <div class="admin-box" style="margin-top:14px">
+            <label style="font-weight:700;color:var(--accent);margin-bottom:8px">📊 Unlock users (verified only)</label>
+            <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.4">Sirf un users ka count jo 12-digit code se verify/unlock kar chuke hain. Normal visit count nahi hota.</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <div style="flex:1;min-width:120px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.2)">
+                <div style="font-size:11px;color:var(--muted)">Aaj (today)</div>
+                <div id="statToday" style="font-size:22px;font-weight:800;color:var(--accent)">—</div>
+              </div>
+              <div style="flex:1;min-width:120px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.2)">
+                <div style="font-size:11px;color:var(--muted)">Is month</div>
+                <div id="statMonth" style="font-size:22px;font-weight:800;color:var(--accent)">—</div>
+              </div>
+            </div>
+            <button class="btn btn-ghost" type="button" id="btnRefreshStats" style="width:100%;margin-top:10px">Refresh stats</button>
+          </div>
+
+<div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Post (link only)</label>
             <label>Username</label>
             <input type="text" id="apUser" placeholder="Sunita" value="Sunita"/>
@@ -684,7 +716,7 @@
 <!-- Unlock sheet -->
 <div class="modal" id="unlockModal">
   <div class="sheet">
-    <h2>Unlock Lumina</h2>
+    <h2>Unlock GMAX</h2>
     <p class="sub">1) Tap <b>Get Key</b> (AroLinks link) → copy 12-digit code<br/>2) Paste below → Verify · valid <b>36 hours</b></p>
     <input id="pwInput" type="text" inputmode="numeric" maxlength="12" placeholder="12-digit code" autocomplete="one-time-code"/>
     <div class="err" id="pwErr"></div>
@@ -702,7 +734,7 @@
   <div class="viewer-head">
     <div class="av" id="viewerAv">L</div>
     <div>
-      <strong id="viewerName">Lumina</strong>
+      <strong id="viewerName">GMAX</strong>
       <div style="font-size:11px;opacity:.7" id="viewerTime">just now</div>
     </div>
   </div>
@@ -721,13 +753,13 @@
   ];
 
   const DEFAULT_POSTS = [
-    { id:'p1', user:'lumina.study', place:'Classroom', title:'Week plan', caption:'Is hafte Algebra + Chemical reactions.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
-    { id:'p2', user:'lumina.study', place:'Notes', title:'Revision sheet', caption:'One-page revision: definitions + 3 examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
+    { id:'p1', user:'gmax.hub', place:'Classroom', title:'Week plan', caption:'Is hafte Algebra + Chemical reactions.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
+    { id:'p2', user:'gmax.hub', place:'Notes', title:'Revision sheet', caption:'One-page revision: definitions + 3 examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
     { id:'p3', user:'mentor.aria', place:'Live', title:'Doubt hour', caption:'Unlock ke baad full resources milenge.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
   ];
 
   const DEFAULT_ABOUT = [
-    { badge:'Slide 1 · Mentor', title:'Learn with a clear, calm feed', body:'Lumina turns your classroom into an Instagram-style stream — stories for quick tips, posts for deep lessons.', bullets:['Stories for daily micro-lessons','Posts for notes & revisions','Like & share what helps'] },
+    { badge:'Slide 1 · Mentor', title:'Learn with a clear, calm feed', body:'GMAX turns your classroom into an Instagram-style stream — stories for quick tips, posts for deep lessons.', bullets:['Stories for daily micro-lessons','Posts for notes & revisions','Like & share what helps'] },
     { badge:'Slide 2 · Access', title:'Private until you unlock', body:'Content stays blurred until a valid 12-digit key is verified. Session lasts 36 hours.', bullets:['Get Key → AroLinks link','Reveal 12-digit code','Verify · study 36 hours'] },
     { badge:'Slide 3 · For educators', title:'Built for your classroom', body:'Glass UI, purple brand, admin on server — deploy on Vercel and share one link.', bullets:['Admin PIN in server env','Token not in browser','Mobile-first layout'] }
   ];
@@ -741,7 +773,7 @@
   let sharedPosts = [];
   let sharedStories = [];
   let sharedAbout = DEFAULT_ABOUT.map(a => ({...a, bullets: [...(a.bullets||[])]}));
-  let sharedBrand = { name:'GMAX Hub', tag:'Study feed · gated classroom', logo:'', avatar:'' };
+  let sharedBrand = { name:'GMAX Hub', tag:'GMAX Hub · gated feed', logo:'', avatar:'' };
   let adminPinSession = '';
 
   const feed = document.getElementById('feed');
@@ -851,7 +883,7 @@
     return `<div class="post-media no-save" style="background:${gradient||'linear-gradient(160deg,#5b2d8e,#1a0a2e)'}">
       <div style="position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center">
         <div>
-          <div style="font-size:13px;opacity:.75;margin-bottom:8px">LUMINA POST</div>
+          <div style="font-size:13px;opacity:.75;margin-bottom:8px">GMAX POST</div>
           <div style="font-size:22px;font-weight:800">${(title||'').replace(/</g,'')}</div>
         </div>
       </div>
@@ -860,7 +892,7 @@
 
     function applyBrand(){
     const name = sharedBrand.name || 'GMAX Hub';
-    const tag = sharedBrand.tag || 'Study feed · gated classroom';
+    const tag = sharedBrand.tag || 'GMAX Hub · gated feed';
     const logo = sharedBrand.logo || '';
     const avatar = sharedBrand.avatar || '';
     const elName = document.getElementById('brandName');
@@ -1023,8 +1055,8 @@
       el.dataset.id = p.id;
       el.innerHTML = `
         <div class="post-head">
-          <div class="post-av">${(p.avatar||sharedBrand.avatar) ? '<img src="'+String(p.avatar||sharedBrand.avatar).replace(/"/g,'')+'" alt="" draggable="false"/>' : (p.user||'L')[0].toUpperCase()}</div>
-          <div class="post-meta"><strong>${p.user||'lumina'}</strong><small>${p.place||''}</small></div>
+          <div class="post-av">${(p.avatar||sharedBrand.avatar) ? '<img src="'+String(p.avatar||sharedBrand.avatar).replace(/"/g,'')+'" alt="" draggable="false"/>' : (p.user||'G')[0].toUpperCase()}</div>
+          <div class="post-meta"><strong>${p.user||'gmax'}</strong><small>${p.place||''}</small></div>
         </div>
         ${mediaBlock(p.media, p.gradient, p.title)}
         <div class="post-actions">
@@ -1043,9 +1075,9 @@
         c.textContent = likeBtn.classList.contains('liked') ? n+1 : Math.max(0,n-1);
       });
       el.querySelector('.share').addEventListener('click', async ()=>{
-        const text = `Lumina · ${p.title||''}\n${p.caption||''}\n${location.href}`;
+        const text = `GMAX · ${p.title||''}\n${p.caption||''}\n${location.href}`;
         try{
-          if(navigator.share) await navigator.share({ title:'Lumina', text, url: location.href });
+          if(navigator.share) await navigator.share({ title:'GMAX', text, url: location.href });
           else { await navigator.clipboard.writeText(text); alert('Link copied'); }
         }catch(e){}
       });
@@ -1164,7 +1196,7 @@
     renderStories();
     const prog = document.getElementById('viewerProgress');
     prog.innerHTML = STORIES.map((_,idx)=>`<i><b style="width:${idx<storyIndex?100:0}%"></b></i>`).join('');
-    document.getElementById('viewerName').textContent = st.name||'Lumina';
+    document.getElementById('viewerName').textContent = st.name||'GMAX';
     document.getElementById('viewerAv').textContent = (st.name||'L')[0];
     let body = `<h3>${st.title||''}</h3><p>${st.body||''}</p>`;
     if(st.media){
@@ -1342,6 +1374,8 @@
       adminLoginBox.style.display='block';
       adminDash.style.display='none';
     }
+  
+    try{ loadUnlockStats(); }catch(e){}
   }
   document.getElementById('adminLoginBtn').onclick = ()=>{
     adminErr.textContent='';
@@ -1362,7 +1396,9 @@
           return;
         }
         if(d.ok && d.until){
+          try{ sessionStorage.setItem('lumina_admin_pin_session', pinVal); }catch(e){}
           try{ localStorage.setItem(ADMIN_KEY, String(d.until)); }catch(e){}
+          try{ loadUnlockStats(); }catch(e){}
           adminPinSession = pinVal; // keep for Publish (same session)
           adminPin.value='';
           showAdmin();
@@ -1625,6 +1661,34 @@
       if(btn) btn.disabled = false;
     }
   });
+
+  
+  /* ===== Unlock stats (admin) ===== */
+  async function loadUnlockStats(){
+    let pin = '';
+    try{ pin = sessionStorage.getItem('lumina_admin_pin_session') || ''; }catch(e){}
+    if(!pin){
+      const t = document.getElementById('statToday');
+      const m = document.getElementById('statMonth');
+      if(t) t.textContent = '—';
+      if(m) m.textContent = '—';
+      return;
+    }
+    try{
+      const r = await fetch('/api/stats', { headers: { 'x-admin-pin': pin } });
+      const d = await r.json().catch(()=>({}));
+      const t = document.getElementById('statToday');
+      const m = document.getElementById('statMonth');
+      if(d.ok){
+        if(t) t.textContent = d.today;
+        if(m) m.textContent = d.month;
+      } else {
+        if(t) t.textContent = '—';
+        if(m) m.textContent = '—';
+      }
+    }catch(e){}
+  }
+  document.getElementById('btnRefreshStats')?.addEventListener('click', ()=> loadUnlockStats());
 
   /* init */
   loadTheme();
