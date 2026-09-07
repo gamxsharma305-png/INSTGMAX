@@ -1,4 +1,12 @@
+/**
+ * POST /api/verify
+ * Body: { code, deviceId }
+ * - Monthly paid pass (Redis) — device bound, 30 days
+ * - Trial 36h AroLinks-style HMAC code
+ * On success: tracks unique device in day/month stats (not on page visit)
+ */
 const crypto = require('crypto');
+
 const PASS_PREFIX = 'lumina:pass:';
 
 function getDeviceSafe(id) {
@@ -43,6 +51,35 @@ async function redisGet(key) {
   return typeof v === 'object' && v ? v : null;
 }
 
+/** Unique unlock user → day + month sets (deviceId) */
+async function trackUnlock(deviceId) {
+  const { url, token } = redisEnv();
+  if (!url || !token || !deviceId) return;
+  const now = new Date();
+  const day = now.toISOString().slice(0, 10);
+  const month = now.toISOString().slice(0, 7);
+  const dkey = 'gmax:stats:day:' + day;
+  const mkey = 'gmax:stats:month:' + month;
+  const headers = { Authorization: 'Bearer ' + token };
+  const id = getDeviceSafe(deviceId);
+
+  try {
+    await fetch(url + '/sadd/' + encodeURIComponent(dkey) + '/' + encodeURIComponent(id), {
+      method: 'POST', headers
+    });
+    await fetch(url + '/sadd/' + encodeURIComponent(mkey) + '/' + encodeURIComponent(id), {
+      method: 'POST', headers
+    });
+    // ~40 days TTL
+    await fetch(url + '/expire/' + encodeURIComponent(dkey) + '/3456000', {
+      method: 'POST', headers
+    });
+    await fetch(url + '/expire/' + encodeURIComponent(mkey) + '/3456000', {
+      method: 'POST', headers
+    });
+  } catch (_) {}
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -64,6 +101,7 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ ok: false, error: '12-digit code required' });
   }
 
+  // 1) Paid monthly pass (Redis) — device bound
   try {
     const rec = await redisGet(PASS_PREFIX + code);
     if (rec && rec.plan === 'month' && rec.until > Date.now()) {
@@ -74,10 +112,19 @@ module.exports = async function handler(req, res) {
           error: 'Ye code kisi aur device ke liye hai. Sirf payment wale phone par chalega.'
         });
       }
-      return res.status(200).json({ ok: true, until: rec.until, plan: 'month', days: 30 });
+      await trackUnlock(deviceId);
+      return res.status(200).json({
+        ok: true,
+        until: rec.until,
+        plan: 'month',
+        days: 30
+      });
     }
-  } catch (e) {}
+  } catch (e) {
+    // fall through
+  }
 
+  // 2) 36-hour trial code (AroLinks / get-key)
   const bucket = Math.floor(Date.now() / (36 * 60 * 60 * 1000));
   const valid =
     code === makeCode(deviceId, secret, bucket) ||
@@ -87,6 +134,7 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'Invalid code for this device' });
   }
 
+  await trackUnlock(deviceId);
   return res.status(200).json({
     ok: true,
     until: Date.now() + 36 * 60 * 60 * 1000,
