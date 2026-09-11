@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>GMAX Hub</title>
 <meta name="theme-color" content="#12081C"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
   :root, [data-theme="gold"]{
     --bg:#1a0f08;
@@ -172,6 +175,44 @@
   .post-media{
     aspect-ratio:4/5;max-height:520px;background:#0c0614;position:relative;overflow:hidden
   }
+
+  /* ===== Reel play/unmute overlay ===== */
+  .reel{position:relative}
+  .reel video{
+    width:100%;height:100%;
+    object-fit:cover;
+    background:#000;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .reel-toggle{
+    position:absolute;right:12px;bottom:12px;z-index:4;
+    display:flex;align-items:center;gap:6px;
+    padding:8px 12px;border-radius:999px;
+    border:1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    background:color-mix(in srgb, #000 55%, transparent);
+    color:#fff;font-size:11px;font-weight:700;letter-spacing:.02em;
+    cursor:pointer;
+    backdrop-filter:blur(10px) saturate(1.2);
+    -webkit-backdrop-filter:blur(10px) saturate(1.2);
+    transition:transform .18s var(--ease-spring), border-color .25s ease, background .25s ease;
+    box-shadow:0 6px 18px rgba(0,0,0,.45);
+  }
+  .reel-toggle .reel-ic-on{display:none}
+  .reel-toggle.is-on .reel-ic-off{display:none}
+  .reel-toggle.is-on .reel-ic-on{display:inline}
+  .reel-toggle.is-on{
+    border-color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 30%, #000 60%);
+  }
+  .reel-toggle .reel-label{font-size:11px}
+  @media(hover:hover){
+    .reel-toggle:hover{transform:scale(1.06);border-color:var(--accent)}
+  }
+  /* Pause hint when no video is active */
+  .reel.is-paused video{opacity:.95}
+  /* Keep media-controls off (we use ours) */
+  .reel video::-webkit-media-controls{display:none !important}
+
   .post-media img,.post-media video{
     width:100%;height:100%;object-fit:cover
   }
@@ -491,8 +532,261 @@
   .profile-main{ position:relative; z-index:5 !important; margin-top:56px !important; }
   .profile-avatar-ring{ position:relative; z-index:6 !important; }
 
+
+  /* ===== Subscription plans + UPI pay (theme vars only) ===== */
+  .plan-row{
+    display:flex;flex-direction:column;gap:8px;
+    width:min(340px,100%);margin-top:12px;
+  }
+  .plan-btn{
+    border:1px solid var(--line);
+    background:color-mix(in srgb, var(--panel-solid) 80%, transparent);
+    color:var(--text);
+    border-radius:14px;padding:12px 14px;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center;
+    font-weight:700;font-size:13px;
+    transition:border-color .2s, box-shadow .2s, transform .15s;
+  }
+  .plan-btn:hover,.plan-btn.active{
+    border-color:var(--accent);
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+               0 8px 24px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+  .plan-btn .plan-price{
+    color:var(--accent);font-size:15px;font-weight:800;
+  }
+  .plan-btn .plan-tag{
+    font-size:10px;font-weight:600;color:var(--muted);
+    margin-top:2px;
+  }
+  .pay-panel{
+    margin:12px 0 0;padding:14px;
+    border-radius:16px;border:1px solid var(--line);
+    background:var(--panel);backdrop-filter:var(--glass);
+    text-align:left;width:min(340px,100%);
+  }
+  .pay-panel[hidden]{display:none !important}
+  .pay-panel h4{margin:0 0 8px;font-size:14px;color:var(--accent)}
+  .pay-qr{
+    width:160px;height:160px;margin:10px auto;
+    border-radius:12px;background:rgba(255,255,255,.95);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  .pay-qr img{width:100%;height:100%;object-fit:contain}
+  .pay-upi-row{
+    display:flex;gap:8px;align-items:center;margin:8px 0 12px;
+  }
+  .pay-upi-row code{
+    flex:1;font-size:12px;padding:10px;border-radius:10px;
+    border:1px solid var(--line);background:rgba(0,0,0,.25);
+    color:var(--text);overflow:hidden;text-overflow:ellipsis;
+  }
+  .pay-form label{
+    display:block;font-size:11px;color:var(--muted);margin:8px 0 4px;
+  }
+  .pay-form input{
+    width:100%;padding:11px 12px;border-radius:10px;
+    border:1px solid var(--line);background:rgba(0,0,0,.25);
+    color:var(--text);font-size:13px;box-sizing:border-box;
+  }
+  .pay-form .btn{margin-top:12px;width:100%}
+  .pay-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4}
+
+  /* Success checkmark modal */
+  .success-modal{
+    position:fixed;inset:0;z-index:200;
+    background:rgba(0,0,0,.65);backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .success-modal[hidden]{display:none !important}
+  .success-sheet{
+    width:min(360px,100%);text-align:center;padding:28px 22px;
+    border-radius:20px;border:1px solid var(--line);
+    background:var(--panel-solid);box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .success-check{
+    width:72px;height:72px;margin:0 auto 14px;border-radius:50%;
+    background:color-mix(in srgb, var(--accent) 25%, transparent);
+    border:2px solid var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-size:36px;animation:popIn .45s cubic-bezier(.22,1.2,.36,1);
+  }
+  @keyframes popIn{
+    from{transform:scale(.4);opacity:0}
+    to{transform:scale(1);opacity:1}
+  }
+  .success-sheet h3{margin:0 0 8px;font-size:18px}
+  .success-sheet p{margin:0;font-size:13px;color:var(--muted);line-height:1.5}
+
+
+  /* Subscribe page */
+  .sub-page-top{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 14px 6px;position:sticky;top:0;z-index:5;
+    background:color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter:blur(12px);
+  }
+  .sub-page-top h2{font-size:17px;margin:0;flex:1}
+  .sub-back{
+    border:1px solid var(--line);background:rgba(0,0,0,.25);
+    color:var(--text);border-radius:999px;padding:8px 12px;
+    font-size:12px;font-weight:600;cursor:pointer;
+  }
+  .sub-page-body{padding:8px 16px 100px;overflow:auto}
+  .sub-page-body .plan-row{width:100%;max-width:400px;margin:12px auto 0}
+  .sub-page-body .pay-panel{width:100%;max-width:400px;margin:14px auto 0}
+  .sub-intro{text-align:center;color:var(--muted);font-size:13px;line-height:1.45;margin:8px 12px 0}
+
+
+  /* ================= Pro Level UI Polish ================= */
+  :root{
+    --shadow-lg:0 24px 60px rgba(0,0,0,.45);
+    --ease-spring:cubic-bezier(.22,1.15,.36,1);
+  }
+  ::selection{background:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--text)}
+  html{-webkit-text-size-adjust:100%}
+  .screens > .screen{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 35%,transparent) transparent}
+  .screens > .screen::-webkit-scrollbar{width:4px}
+  .screens > .screen::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--accent) 35%,transparent);border-radius:99px}
+
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;border-radius:10px;
+  }
+  .icon-btn{transition:transform .18s var(--ease-spring),box-shadow .25s ease,border-color .25s ease}
+  .icon-btn:hover{border-color:color-mix(in srgb,var(--accent) 60%,transparent);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  .brand h1{
+    background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    background-size:200% auto;animation:brandShine 6s linear infinite;
+  }
+  @keyframes brandShine{to{background-position:200% center}}
+  .logo{
+    box-shadow:
+      0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent),
+      0 0 22px color-mix(in srgb,var(--accent) 30%,transparent);
+    transition:transform .2s var(--ease-spring);
+  }
+  .logo:hover{transform:scale(1.06)}
+
+  .btn{transition:transform .18s var(--ease-spring),box-shadow .25s ease,filter .25s ease,border-color .25s ease}
+  .btn-primary{position:relative;overflow:hidden;box-shadow:0 10px 26px color-mix(in srgb,var(--accent) 34%,transparent)}
+  .btn-primary::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;
+    background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.28) 50%,transparent 70%);
+    transform:translateX(-130%);transition:transform .7s ease;pointer-events:none;
+  }
+  .btn-primary:hover::after{transform:translateX(130%)}
+  @media(hover:hover){
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 32px color-mix(in srgb,var(--accent) 48%,transparent)}
+    .btn-ghost:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent) 70%,transparent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+    .plan-btn:hover{transform:translateY(-2px)}
+    .story:hover .ring{filter:brightness(1.15)}
+  }
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .post{animation:fadeUp .45s var(--ease-spring) backwards}
+  .post:nth-child(1){animation-delay:.03s}
+  .post:nth-child(2){animation-delay:.08s}
+  .post:nth-child(3){animation-delay:.13s}
+  .post:nth-child(4){animation-delay:.18s}
+  .post:nth-child(5){animation-delay:.23s}
+
+  .sheet{animation:sheetUp .38s var(--ease-spring)}
+  @keyframes sheetUp{from{transform:translateY(44px);opacity:0}to{transform:none;opacity:1}}
+  .profile-avatar-ring{animation:pop .5s var(--ease-spring)}
+  @keyframes pop{from{transform:scale(.85);opacity:.4}to{transform:scale(1);opacity:1}}
+
+  .tab{font-weight:650;letter-spacing:.02em}
+  .timer-chip{box-shadow:0 0 14px color-mix(in srgb,var(--accent) 25%,transparent)}
+  .admin-box input:focus,.admin-box textarea:focus,.pay-form input:focus,.sheet input:focus{
+    border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);
+  }
+  .about-slide h2{
+    background:linear-gradient(120deg,var(--text),color-mix(in srgb,var(--accent) 85%,var(--text)));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .post-meta strong,.profile-name{letter-spacing:-.01em}
+  .viewer .slide-card{box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .profile-sub-btn{transition:transform .2s var(--ease-spring),box-shadow .3s ease,filter .2s ease}
+  @media(hover:hover){
+    .profile-sub-btn:hover{transform:translateY(-2px);filter:brightness(1.06)}
+  }
+  .sub-page-body{scrollbar-width:thin}
+  .plan-btn{border-radius:16px}
+
+  /* ===== Pay Now under each plan (UPI deep link) ===== */
+  .plan-pay{
+    display:flex;align-items:center;gap:12px;
+    width:100%;
+    margin:6px 0 14px;
+    padding:14px 16px;
+    border-radius:14px;
+    border:1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    background:linear-gradient(135deg,
+        color-mix(in srgb, var(--accent) 32%, transparent),
+        color-mix(in srgb, var(--accent2) 22%, transparent));
+    color:var(--text);
+    text-decoration:none;
+    cursor:pointer;
+    box-shadow:0 10px 26px color-mix(in srgb, var(--accent) 24%, transparent),
+               inset 0 0 0 1px color-mix(in srgb, #fff 8%, transparent);
+    transition:transform .18s var(--ease-spring), box-shadow .25s ease, filter .2s ease;
+    position:relative;overflow:hidden;
+  }
+  .plan-pay::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;
+    background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.18) 50%,transparent 70%);
+    transform:translateX(-130%);transition:transform .8s ease;pointer-events:none;
+  }
+  @media(hover:hover){
+    .plan-pay:hover{transform:translateY(-2px);box-shadow:0 14px 32px color-mix(in srgb, var(--accent) 40%, transparent)}
+    .plan-pay:hover::after{transform:translateX(130%)}
+  }
+  .plan-pay:active{transform:translateY(0);filter:brightness(.95)}
+  .plan-pay .plan-pay-ic{
+    width:40px;height:40px;border-radius:50%;
+    display:grid;place-items:center;font-size:20px;
+    background:color-mix(in srgb, var(--accent) 35%, transparent);
+    border:1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    flex-shrink:0;
+  }
+  .plan-pay .plan-pay-tx{display:flex;flex-direction:column;flex:1;line-height:1.25}
+  .plan-pay .plan-pay-tx b{font-size:14px;font-weight:800;letter-spacing:.01em}
+  .plan-pay .plan-pay-tx i{font-size:11px;color:var(--muted);font-style:normal;font-weight:600;margin-top:2px}
+  .plan-pay .plan-pay-go{
+    font-size:18px;font-weight:800;color:var(--accent);
+    transition:transform .2s var(--ease-spring);
+  }
+  @media(hover:hover){.plan-pay:hover .plan-pay-go{transform:translateX(4px)}}
+
+  /* "Payment started" / "Awaiting payment" state */
+  .plan-pay.is-pending{
+    filter:grayscale(.2) brightness(.92);
+    pointer-events:none;cursor:default;
+  }
+  .plan-pay .plan-pay-tx b::after{content:"";}
+  .plan-pay.is-pending .plan-pay-tx b::after{
+    content:" · Payment started…";color:var(--accent);font-weight:700;
+  }
+  .plan-pay.is-pending .plan-pay-go{
+    animation:spin 1.1s linear infinite;display:inline-block;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* auto-reveal pay-panel notice */
+  .pay-panel .pay-return-hint{
+    margin:-6px 0 12px;padding:10px 12px;
+    border-radius:12px;
+    border:1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    background:color-mix(in srgb, var(--accent) 12%, transparent);
+    color:var(--text);font-size:12px;line-height:1.4;
+    display:flex;gap:8px;align-items:flex-start;
+  }
+  .pay-panel .pay-return-hint b{color:var(--accent)}
+  @media(max-width:519px){
+    .topbar{backdrop-filter:blur(20px) saturate(1.35)}
+  }
 </style>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -520,7 +814,12 @@
         <div class="profile-cover" id="profileCover"></div>
         <div class="profile-top-row">
           <div class="profile-brand-pill" id="brandPill">GMAX HUB</div>
-          <button type="button" class="profile-login-btn" id="btnProfileUnlock">Unlock</button>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <button type="button" class="profile-login-btn" id="btnProfileUnlock">Unlock</button>
+            <button type="button" class="profile-login-btn" id="btnGoogleSignIn">Google</button>
+            <button type="button" class="profile-login-btn" id="btnGoogleSignOut" style="display:none">Sign out</button>
+          </div>
+          <div id="googleUserLabel" style="font-size:11px;color:var(--muted);text-align:right;padding:4px 14px 0;min-height:16px"></div>
         </div>
         <div class="profile-main">
           <div class="profile-avatar-ring" id="profileAvatarRing">
@@ -531,7 +830,7 @@
             <span class="verified" title="Verified">✓</span>
           </div>
           <div class="profile-handle" id="profileHandle">@gmaxhub</div>
-          <button type="button" class="profile-sub-btn" id="btnBuyMonth">Subscribe for ₹ 199.00 / monthly</button>
+          <button type="button" class="profile-sub-btn" id="btnOpenSubscribe">Subscribe</button>
           <p id="monthPayMsg"></p>
           <p class="profile-bio" id="profileBio">Instagram was just a sneak peek… The real deal is only here.<br/>Ready to see? 😉</p>
           <div class="profile-stats">
@@ -563,14 +862,14 @@
       <!-- STORIES under profile -->
       <div class="stories-wrap locked" id="storiesWrap">
         <div class="stories" id="storiesRow"></div>
-        <div class="stories-lock">🔒 Stories unlock ke baad<br/><button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock</button></div>
+        <div class="stories-lock">🔒 Stories unlock after subscribing<br/><button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock</button></div>
       </div>
 
       <!-- FEED -->
       <div class="feed locked" id="feed">
         <div class="lock-banner">
-          <h3>🔒 Please unlock your password</h3>
-          <p>Sirf 2 posts preview. Poora feed dekhne ke liye <b>12-digit code</b> se unlock karein (36 hours) ya Subscribe ₹199 / month.</p>
+          <h3>🔒 This feed is locked</h3>
+          <p>Only 2 posts previewed. Unlock the full feed with a <b>12-digit code</b> (valid 36 hours) or subscribe for ₹199 / month.</p>
           <button class="btn btn-primary" type="button" id="btnOpenUnlock">Start · Unlock feed</button>
         </div>
         <div id="posts"></div>
@@ -583,7 +882,79 @@
     </section>
 
     <!-- ADMIN -->
-    <section class="screen" id="screenAdmin">
+    
+    <section class="screen" id="screenSubscribe">
+      <div class="sub-page-top">
+        <button type="button" class="sub-back" id="btnSubBack">← Back</button>
+        <h2>Subscribe</h2>
+      </div>
+      <p class="sub-intro">Choose a plan → Pay via UPI → Submit your UTR. Access activates once approved.</p>
+      <div class="sub-page-body">
+        <div class="plan-row" id="planRow">
+          <button type="button" class="plan-btn" data-plan="m1" data-amount="199" data-label="1 Month">
+            <span><div>1 Month Access</div><div class="plan-tag">Full feed · 30 days</div></span>
+            <span class="plan-price">₹199</span>
+          </button>
+          <a class="plan-pay" data-plan="m1" data-amount="199" data-label="1 Month" id="payNowM1" href="upi://pay?pa=sonu77370725%40axl&pn=GMAX%20Hub&am=199&cu=INR&tn=GMAX%20-%201%20Month" rel="noopener">
+            <span class="plan-pay-ic">💸</span>
+            <span class="plan-pay-tx"><b>Pay Now · ₹199</b><i>Tap to open your UPI app</i></span>
+            <span class="plan-pay-go">→</span>
+          </a>
+
+          <button type="button" class="plan-btn" data-plan="m2" data-amount="299" data-label="2 Months">
+            <span><div>2 Months Access</div><div class="plan-tag">Full feed · 60 days</div></span>
+            <span class="plan-price">₹299</span>
+          </button>
+          <a class="plan-pay" data-plan="m2" data-amount="299" data-label="2 Months" id="payNowM2" href="upi://pay?pa=sonu77370725%40axl&pn=GMAX%20Hub&am=299&cu=INR&tn=GMAX%20-%202%20Months" rel="noopener">
+            <span class="plan-pay-ic">💸</span>
+            <span class="plan-pay-tx"><b>Pay Now · ₹299</b><i>Tap to open your UPI app</i></span>
+            <span class="plan-pay-go">→</span>
+          </a>
+
+          <button type="button" class="plan-btn" data-plan="m3" data-amount="399" data-label="3 Months">
+            <span><div>3 Months Access</div><div class="plan-tag">Full feed · 90 days</div></span>
+            <span class="plan-price">₹399</span>
+          </button>
+          <a class="plan-pay" data-plan="m3" data-amount="399" data-label="3 Months" id="payNowM3" href="upi://pay?pa=sonu77370725%40axl&pn=GMAX%20Hub&am=399&cu=INR&tn=GMAX%20-%203%20Months" rel="noopener">
+            <span class="plan-pay-ic">💸</span>
+            <span class="plan-pay-tx"><b>Pay Now · ₹399</b><i>Tap to open your UPI app</i></span>
+            <span class="plan-pay-go">→</span>
+          </a>
+        </div>
+
+        <div class="pay-panel" id="payPanel" hidden>
+          <div class="pay-return-hint" id="payReturnHint" hidden>
+            <span style="font-size:18px;line-height:1">✅</span>
+            <span><b>Welcome back!</b> Your UPI app should have opened. Enter the 12-digit <b>UTR / UPI Ref No.</b> below and press <b>Submit</b> for instant approval.</span>
+          </div>
+          <h4 id="payPanelTitle">Pay ₹199</h4>
+          <p class="pay-note">Pay via UPI, then enter the UTR (Ref No.) below. Access is granted after approval.</p>
+          <div class="pay-qr" id="payQrBox">
+            <span style="color:#333;font-size:12px;padding:8px;text-align:center">QR code here<br/>(set UPI_QR_URL)</span>
+          </div>
+          <div class="pay-upi-row">
+            <code id="payUpiId">sonu77370725@axl</code>
+            <button type="button" class="btn btn-ghost" id="btnCopyUpi" style="white-space:nowrap">Copy</button>
+          </div>
+          <form class="pay-form" id="payForm">
+            <input type="hidden" id="payPlan" value="m1"/>
+            <input type="hidden" id="payAmount" value="199"/>
+            <label>Name</label>
+            <input id="payName" required maxlength="80" placeholder="Your name" autocomplete="name"/>
+            <label>Email</label>
+            <input id="payEmail" type="email" required maxlength="120" placeholder="you@email.com" autocomplete="email"/>
+            <label>Mobile</label>
+            <input id="payMobile" type="tel" required maxlength="15" placeholder="10-digit mobile" autocomplete="tel"/>
+            <label>UTR / UPI Ref No. (12 digits)</label>
+            <input id="payUtr" inputmode="numeric" pattern="[0-9]{12}" required maxlength="12" minlength="12" placeholder="12-digit UTR"/>
+            <button class="btn btn-primary" type="submit" id="paySubmitBtn">Submit for approval</button>
+          </form>
+          <p id="payFormMsg" class="pay-note"></p>
+        </div>
+      </div>
+    </section>
+
+<section class="screen" id="screenAdmin">
       <div class="admin-wrap">
         <h2>Admin panel</h2>
         <p class="sub">PIN is checked only on the server (Vercel env). Never stored in this page source as plain text for production.</p>
@@ -600,7 +971,7 @@
           </div>
 
           <div class="admin-box" style="margin-top:14px">
-            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🖼️ Profile / Logo (sab jagah)</label>
+            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🖼️ Profile / Logo (applies everywhere)</label>
             <label>Site name</label>
             <input type="text" id="brandNameInput" placeholder="GMAX Hub" value="GMAX Hub"/>
             <label>Tagline</label>
@@ -623,20 +994,20 @@
               <option value="rose">Rose Pink</option>
             </select>
             <button class="btn btn-ghost" type="button" id="themeApplyBtn" style="width:100%">Apply theme</button>
-            <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4">Publish to all users दबाने पर सब devices पर यही theme लग जाएगा।</p>
+            <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4">Click "Publish to all users" to apply this theme on every device.</p>
           </div>
 
           
           <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:8px">📊 Unlock users (verified only)</label>
-            <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.4">Sirf un users ka count jo 12-digit code se verify/unlock kar chuke hain. Normal visit count nahi hota.</p>
+            <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.4">Counts only users who verified / unlocked with a 12-digit code. Regular visits are not counted.</p>
             <div style="display:flex;gap:12px;flex-wrap:wrap">
               <div style="flex:1;min-width:120px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.2)">
-                <div style="font-size:11px;color:var(--muted)">Aaj (today)</div>
+                <div style="font-size:11px;color:var(--muted)">Today</div>
                 <div id="statToday" style="font-size:22px;font-weight:800;color:var(--accent)">—</div>
               </div>
               <div style="flex:1;min-width:120px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.2)">
-                <div style="font-size:11px;color:var(--muted)">Is month</div>
+                <div style="font-size:11px;color:var(--muted)">This month</div>
                 <div id="statMonth" style="font-size:22px;font-weight:800;color:var(--accent)">—</div>
               </div>
             </div>
@@ -647,7 +1018,7 @@
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Post (link only)</label>
             <label>Username</label>
             <input type="text" id="apUser" placeholder="Sunita" value="Sunita"/>
-            <label>User avatar image link (post ke bagal wala)</label>
+            <label>User avatar image link (next to the post)</label>
             <input type="url" id="apAvatar" placeholder="https://… image URL"/>
             <label>Title</label>
             <input type="text" id="apTitle" placeholder="Chapter name"/>
@@ -683,8 +1054,8 @@
             <label style="font-weight:700;margin-bottom:8px">Manage · shared feed</label>
             <div id="adminList" style="font-size:12.5px;color:var(--muted);max-height:180px;overflow:auto"></div>
             <p style="font-size:12px;color:var(--muted);margin:10px 0;line-height:1.45">
-              <b style="color:var(--accent)">Publish to everyone</b> permanent store (Upstash) में सेव करता है — सभी यूज़र्स को दिखेगा।
-              (Vercel env: UPSTASH_REDIS_REST_URL + TOKEN ज़रूरी)
+              <b style="color:var(--accent)">Publish to everyone</b> permanent store (Upstash) — visible to every user.
+              (Vercel env: UPSTASH_REDIS_REST_URL + TOKEN required)
             </p>
             <button class="btn btn-primary" type="button" id="adminPublishAll" style="width:100%">🌐 Publish to all users</button>
             <div class="err" id="publishErr" style="margin-top:8px"></div>
@@ -745,17 +1116,17 @@
 <script>
 (function(){
   const DEFAULT_STORIES = [
-    { id:'s1', name:'Tips', title:'Pomodoro 25+5', body:'Padhai 25 min, break 5 min. 4 rounds ke baad lambi break. Focus badhega.', media:'' },
-    { id:'s2', name:'Math', title:'Formula wall', body:'Quadratic roots practice. Roz 5 sawal.', media:'' },
-    { id:'s3', name:'Science', title:'NCERT first', body:'Diagrams label karke likho.', media:'' },
-    { id:'s4', name:'English', title:'One para/day', body:'Roz ek paragraph rewrite.', media:'' },
-    { id:'s5', name:'Mindset', title:'Consistency', body:'Roz thoda > kabhi-kabhi bahut.', media:'' }
+    { id:'s1', name:'Tips', title:'Pomodoro 25+5', body:'Study 25 min, break 5 min. After 4 rounds, take a long break. Focus improves.', media:'' },
+    { id:'s2', name:'Math', title:'Formula wall', body:'Quadratic roots practice. 5 problems a day.', media:'' },
+    { id:'s3', name:'Science', title:'NCERT first', body:'Label the diagrams as you write.', media:'' },
+    { id:'s4', name:'English', title:'One para/day', body:'Rewrite one paragraph every day.', media:'' },
+    { id:'s5', name:'Mindset', title:'Consistency', body:'A little every day beats a lot at once.', media:'' }
   ];
 
   const DEFAULT_POSTS = [
-    { id:'p1', user:'gmax.hub', place:'Classroom', title:'Week plan', caption:'Is hafte Algebra + Chemical reactions.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
+    { id:'p1', user:'gmax.hub', place:'Classroom', title:'Week plan', caption:'This week: Algebra + Chemical reactions.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
     { id:'p2', user:'gmax.hub', place:'Notes', title:'Revision sheet', caption:'One-page revision: definitions + 3 examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
-    { id:'p3', user:'mentor.aria', place:'Live', title:'Doubt hour', caption:'Unlock ke baad full resources milenge.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
+    { id:'p3', user:'mentor.aria', place:'Live', title:'Doubt hour', caption:'Full resources unlock after verification.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
   ];
 
   const DEFAULT_ABOUT = [
@@ -876,7 +1247,18 @@
   function mediaBlock(url, gradient, title){
     if(url){
       if(isVideoUrl(url)){
-        return `<div class="post-media media-protect no-save"><video src="${url.replace(/"/g,'')}" playsinline muted loop autoplay></video></div>`;
+        const safe = url.replace(/"/g,'');
+        return `<div class="post-media media-protect no-save reel" data-reel="1">
+          <video src="${safe}" playsinline muted loop autoplay preload="metadata"
+                 webkit-playsinline="true" x5-playsinline="true"
+                 oncontextmenu="return false" controlslist="nodownload noplaybackrate"
+                 disablepictureinpicture></video>
+          <button type="button" class="reel-toggle" aria-label="Tap to play with sound">
+            <span class="reel-ic-off">🔇</span>
+            <span class="reel-ic-on">🔊</span>
+            <span class="reel-label">Tap for sound</span>
+          </button>
+        </div>`;
       }
       return `<div class="post-media media-protect no-save"><img src="${url.replace(/"/g,'')}" alt="" draggable="false"/></div>`;
     }
@@ -889,6 +1271,88 @@
       </div>
     </div>`;
   }
+
+  /* ===== Reel player: tap to unmute + only one playing at a time ===== */
+  function syncReelButton(reel){
+    const btn = reel.querySelector('.reel-toggle');
+    const v = reel.querySelector('video');
+    if(!btn || !v) return;
+    const hasSound = !v.muted && !v.paused && v.currentTime > 0.1;
+    btn.classList.toggle('is-on', hasSound);
+    btn.setAttribute('aria-label', hasSound ? 'Mute' : 'Tap to play with sound');
+  }
+  function bindReels(root){
+    const reels = (root||document).querySelectorAll('.reel');
+    if(!reels.length) return;
+    reels.forEach(reel=>{
+      const v = reel.querySelector('video');
+      const btn = reel.querySelector('.reel-toggle');
+      if(!v || !btn || reel.__bound) return;
+      reel.__bound = true;
+
+      // play-with-sound toggle (must be inside a user gesture)
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        e.preventDefault();
+        if(v.paused) v.play().catch(()=>{});
+        v.muted = !v.muted;
+        syncReelButton(reel);
+      });
+
+      // double-tap / image-only context fallback: tap on the reel plays-with-sound
+      reel.addEventListener('click', (e)=>{
+        if(e.target.closest('.reel-toggle')) return;
+        v.muted = !v.muted;
+        if(v.paused) v.play().catch(()=>{});
+        syncReelButton(reel);
+      });
+
+      v.addEventListener('play', ()=> syncReelButton(reel));
+      v.addEventListener('pause',()=> syncReelButton(reel));
+      v.addEventListener('volumechange', ()=> syncReelButton(reel));
+      v.addEventListener('loadeddata', ()=> syncReelButton(reel));
+
+      // Promote autoplay even if muted was stripped
+      try{ v.muted = true; v.play().catch(()=>{}); }catch(e){}
+
+      syncReelButton(reel);
+    });
+  }
+
+  /* Only one reel plays at a time (viewport-driven) */
+  if(typeof window !== 'undefined' && 'IntersectionObserver' in window){
+    if(!window.__reelIO){
+      window.__reelIO = new IntersectionObserver((entries)=>{
+        entries.forEach(en=>{
+          const v = en.target.querySelector('video');
+          if(!v) return;
+          if(en.isIntersecting && en.intersectionRatio >= 0.5){
+            // pause others first
+            document.querySelectorAll('.reel video').forEach(x=>{
+              if(x !== v && !x.paused){ x.pause(); }
+            });
+            if(v.paused) v.play().catch(()=>{});
+          }else{
+            if(!v.paused){ v.pause(); }
+            if(!v.muted){
+              // leave user-selected sound, just pause. If you also want auto-remute, set v.muted=true here.
+            }
+          }
+        });
+      }, { threshold: [0, 0.5, 0.9] });
+      window.__reelIO.observe = window.__reelIO.observe.bind(window.__reelIO);
+    }
+  }
+  function watchNewReels(){
+    if(!window.__reelIO) return;
+    document.querySelectorAll('.reel:not([data-obs])').forEach(el=>{
+      el.setAttribute('data-obs','1');
+      window.__reelIO.observe(el);
+    });
+  }
+  // initial pass + after every render
+  setTimeout(()=>{ bindReels(); watchNewReels(); }, 0);
+  document.addEventListener('DOMContentLoaded', ()=>{ bindReels(); watchNewReels(); });
 
     function applyBrand(){
     const name = sharedBrand.name || 'GMAX Hub';
@@ -1091,8 +1555,8 @@
       wall.innerHTML = `
         <div class="unlock-wall-inner">
           <div style="font-size:32px;margin-bottom:8px">🔒</div>
-          <h3>Please unlock your password</h3>
-          <p>Aap ne 2 posts dekh liye. Poora feed, stories aur media dekhne ke liye 12-digit code se unlock karein.</p>
+          <h3>This feed is locked</h3>
+          <p>You have seen 2 posts. Unlock with a 12-digit code to view the full feed, stories and media.</p>
           <button class="btn btn-primary" type="button" id="btnWallUnlock">Unlock now</button>
         </div>`;
       postsEl.appendChild(wall);
@@ -1292,7 +1756,7 @@
   function tryVerify(){
     const val = (pwInput.value||'').trim().replace(/\s+/g,'');
     if(!/^\d{12}$/.test(val)){
-      pwErr.textContent = '12-digit code enter karein.';
+      pwErr.textContent = 'Enter the 12-digit code.';
       return;
     }
     pwSubmit.disabled = true;
@@ -1309,7 +1773,7 @@
         try { d = JSON.parse(text); } catch(e) {}
         if(!r.ok || !d){
           pwErr.textContent = r.status === 404
-            ? 'API missing (404). api/ folder upload karke Redeploy karein.'
+            ? 'API missing (404). Upload the api/ folder and redeploy.'
             : ('Server error ' + r.status);
           return;
         }
@@ -1391,7 +1855,7 @@
         try { d = JSON.parse(text); } catch(e) {}
         if(!r.ok || !d){
           adminErr.textContent = r.status === 404
-            ? 'API missing (404). api/admin.js deploy karein.'
+            ? 'API missing (404). Deploy api/admin.js.'
             : ('Server error ' + r.status);
           return;
         }
@@ -1419,9 +1883,9 @@
     const caption = (document.getElementById('apCaption').value||'').trim();
     const media = (document.getElementById('apMedia').value||'').trim();
     const place = (document.getElementById('apPlace').value||'').trim();
-    if(!title && !caption && !media){ alert('Title, caption ya media link bharo'); return; }
-    if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start ho'); return; }
-    if(avatar && !/^https?:\/\//i.test(avatar)){ alert('Avatar link https:// se start ho'); return; }
+    if(!title && !caption && !media){ alert('Please fill in the title, caption, or media link'); return; }
+    if(media && !/^https?:\/\//i.test(media)){ alert('Media link must start with https://'); return; }
+    if(avatar && !/^https?:\/\//i.test(avatar)){ alert('Avatar link must start with https://'); return; }
     if(!sharedPosts) sharedPosts = [];
     contentFromServer = true; // drafts are real list now, not demo defaults
     sharedPosts.unshift({
@@ -1433,7 +1897,7 @@
     document.getElementById('apMedia').value='';
     if(document.getElementById('apAvatar')) document.getElementById('apAvatar').value='';
     refreshAll();
-    alert('Post draft ready. Ab "Publish to all users" dabao taaki sabko dikhe.');
+    alert('Post draft ready. Press "Publish to all users" so everyone can see it.');
   };
 
   document.getElementById('asAdd').onclick = ()=>{
@@ -1441,8 +1905,8 @@
     const title = (document.getElementById('asTitle').value||'').trim();
     const body = (document.getElementById('asBody').value||'').trim();
     const media = (document.getElementById('asMedia').value||'').trim();
-    if(!title && !body){ alert('Title ya body bharo'); return; }
-    if(media && !/^https?:\/\//i.test(media)){ alert('Media link https:// se start ho'); return; }
+    if(!title && !body){ alert('Please fill in the title or body'); return; }
+    if(media && !/^https?:\/\//i.test(media)){ alert('Media link must start with https://'); return; }
     if(!sharedStories) sharedStories = [];
     contentFromServer = true;
     sharedStories.unshift({ id:'cs'+Date.now(), name, title, body, media });
@@ -1450,17 +1914,17 @@
     document.getElementById('asBody').value='';
     document.getElementById('asMedia').value='';
     refreshAll();
-    alert('Story draft ready. "Publish to all users" dabao.');
+    alert('Story draft ready. Press "Publish to all users".');
   };
 
   document.getElementById('aboutApplyLocal').onclick = ()=>{
     sharedAbout = readAboutFromEditor();
     renderAbout();
-    alert('About updated on screen. Publish to all users se sabko milega.');
+    alert('About updated on screen. Publish to all users to share it.');
   };
 
   document.getElementById('adminClearCustom').onclick = ()=>{
-    if(!confirm('Sari custom posts/stories hataein? (Publish ke baad sab devices se)')) return;
+    if(!confirm('Delete all custom posts/stories? (Removed from all devices after publishing)')) return;
     sharedPosts = [];
     sharedStories = [];
     refreshAll();
@@ -1471,7 +1935,7 @@
     err.textContent = '';
     if(!adminPinSession){
       // ask pin again for publish
-      const pin = prompt('Publish ke liye Admin PIN dubara enter karein:');
+      const pin = prompt('Enter your Admin PIN again to publish:');
       if(!pin){ err.textContent = 'PIN required'; return; }
       adminPinSession = pin;
     }
@@ -1518,7 +1982,7 @@
         const pc = (sharedPosts||[]).length;
         const sc = (sharedStories||[]).length;
         err.style.color = '#86efac';
-        err.textContent = 'Published OK · posts=' + pc + ' stories=' + sc + ' · doosra phone refresh kare';
+        err.textContent = 'Published OK · posts=' + pc + ' stories=' + sc + ' · refresh your other phone';
         // verify round-trip
         return fetch('/api/content?t=' + Date.now(), {cache:'no-store'}).then(r2=>r2.json()).then(d2=>{
           if(d2 && d2.content){
@@ -1547,7 +2011,7 @@
     applyBrand();
     applyTheme(sharedBrand.theme);
     renderPosts();
-    alert('Profile applied on screen. Publish to all users se sab devices par jayega.');
+    alert('Profile applied on screen. Use \"Publish to all users\" to push it to all devices.');
   };
   const btnUS = document.getElementById('btnUnlockStories');
   if(btnUS) btnUS.onclick = openUnlock;
@@ -1561,7 +2025,7 @@
   if(themeBtn) themeBtn.onclick = ()=>{
     const sel = document.getElementById('themeSelect');
     applyTheme(sel ? sel.value : 'gold');
-    alert('Theme applied. Publish to all users से सबको मिलेगा।');
+    alert('Theme applied. Use "Publish to all users" to share it with everyone.');
   };
   const themeSel = document.getElementById('themeSelect');
   if(themeSel) themeSel.onchange = ()=> applyTheme(themeSel.value);
@@ -1584,82 +2048,6 @@
       btn.classList.add('active');
       playClickSound && playClickSound();
     });
-  });
-
-  /* ₹199 Monthly — Razorpay */
-  function getDeviceId(){
-    try{
-      let id = localStorage.getItem('lumina_device_id');
-      if(!id){
-        id = ('D'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4)).toUpperCase();
-        localStorage.setItem('lumina_device_id', id);
-      }
-      return id;
-    }catch(e){ return 'WEBDEVICE0001'; }
-  }
-  document.getElementById('btnBuyMonth')?.addEventListener('click', async ()=>{
-    const msg = document.getElementById('monthPayMsg');
-    const btn = document.getElementById('btnBuyMonth');
-    if(msg){ msg.style.color=''; msg.textContent = 'Order ban raha hai…'; }
-    if(btn) btn.disabled = true;
-    try{
-      if(typeof Razorpay === 'undefined'){
-        if(msg) msg.textContent = 'Razorpay script load nahi hui. Net check karo.';
-        if(btn) btn.disabled = false;
-        return;
-      }
-      const deviceId = getDeviceId();
-      const r = await fetch('/api/create-order', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ deviceId })
-      });
-      const d = await r.json().catch(()=>({}));
-      if(!d.ok || !d.orderId){
-        if(msg) msg.textContent = d.error || 'Order fail — api/create-order + Razorpay env check karo';
-        if(btn) btn.disabled = false;
-        return;
-      }
-      const rzp = new Razorpay({
-        key: d.keyId,
-        amount: d.amount,
-        currency: d.currency || 'INR',
-        name: (sharedBrand && sharedBrand.name) || 'GMAX Hub',
-        description: '1 Month Pass · this device only',
-        order_id: d.orderId,
-        handler: async function(response){
-          if(msg) msg.textContent = 'Payment verify…';
-          const v = await fetch('/api/verify-payment', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              deviceId: deviceId
-            })
-          });
-          const out = await v.json().catch(()=>({}));
-          if(out.ok && out.code){
-            if(msg){
-              msg.style.color = '#86efac';
-              msg.innerHTML = 'Success! Code: <b style="letter-spacing:.12em">'+out.code+'</b><br/>Neeche Verify me dalo · 30 din · is phone only';
-            }
-            const inp = document.getElementById('pwInput');
-            if(inp) inp.value = out.code;
-            if(typeof openUnlock === 'function') openUnlock();
-          } else {
-            if(msg) msg.textContent = out.error || 'Verify fail';
-          }
-          if(btn) btn.disabled = false;
-        },
-        modal: { ondismiss: function(){ if(btn) btn.disabled = false; if(msg) msg.textContent=''; } }
-      });
-      rzp.open();
-    }catch(e){
-      if(msg) msg.textContent = 'Error: '+(e.message||'network');
-      if(btn) btn.disabled = false;
-    }
   });
 
   
@@ -1690,13 +2078,351 @@
   }
   document.getElementById('btnRefreshStats')?.addEventListener('click', ()=> loadUnlockStats());
 
+  
+  /* ===== Google Auth (Supabase) ===== */
+  let supabaseClient = null;
+  let googleUser = null;
+
+  async function initSupabase(){
+    try{
+      if(typeof window.supabase === 'undefined'){
+        console.warn('supabase-js not loaded');
+        return null;
+      }
+      const r = await fetch('/api/public-config');
+      const d = await r.json().catch(()=>({}));
+      if(!d.ok || !d.supabaseUrl || !d.supabaseAnonKey){
+        console.warn('Supabase config missing', d.error || d);
+        return null;
+      }
+      supabaseClient = window.supabase.createClient(d.supabaseUrl, d.supabaseAnonKey, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      });
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if(session) await onGoogleSession(session);
+      supabaseClient.auth.onAuthStateChange(async (_ev, session)=>{
+        if(session) await onGoogleSession(session);
+        else onGoogleSignedOut();
+      });
+      return supabaseClient;
+    }catch(e){
+      console.warn('initSupabase', e);
+      return null;
+    }
+  }
+
+  async function onGoogleSession(session){
+    googleUser = session && session.user ? session.user : null;
+    const btnIn = document.getElementById('btnGoogleSignIn');
+    const btnOut = document.getElementById('btnGoogleSignOut');
+    const label = document.getElementById('googleUserLabel');
+    if(btnIn) btnIn.style.display = 'none';
+    if(btnOut) btnOut.style.display = '';
+    if(label){
+      const name = (googleUser && (googleUser.user_metadata && (googleUser.user_metadata.full_name || googleUser.user_metadata.name))) || (googleUser && googleUser.email) || 'Signed in';
+      label.textContent = name;
+    }
+    try{
+      localStorage.setItem('gmax_google_uid', (googleUser && googleUser.id) || '');
+      localStorage.setItem('gmax_google_email', (googleUser && googleUser.email) || '');
+    }catch(e){}
+  }
+
+  function onGoogleSignedOut(){
+    googleUser = null;
+    const btnIn = document.getElementById('btnGoogleSignIn');
+    const btnOut = document.getElementById('btnGoogleSignOut');
+    const label = document.getElementById('googleUserLabel');
+    if(btnIn) btnIn.style.display = '';
+    if(btnOut) btnOut.style.display = 'none';
+    if(label) label.textContent = '';
+    try{
+      localStorage.removeItem('gmax_google_uid');
+      localStorage.removeItem('gmax_google_email');
+    }catch(e){}
+  }
+
+  async function signInWithGoogle(){
+    if(!supabaseClient) await initSupabase();
+    if(!supabaseClient){
+      alert('Google login setup incomplete.\nAdd SUPABASE_URL + SUPABASE_ANON_KEY to your Vercel environment,\nthen deploy api/public-config.js.');
+      return;
+    }
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + (window.location.pathname || '/'),
+        queryParams: { access_type: 'offline', prompt: 'select_account' }
+      }
+    });
+    if(error) alert(error.message || 'Google sign-in failed');
+  }
+
+  async function signOutGoogle(){
+    if(!supabaseClient) await initSupabase();
+    if(supabaseClient) await supabaseClient.auth.signOut();
+    onGoogleSignedOut();
+  }
+
+  document.getElementById('btnGoogleSignIn')?.addEventListener('click', ()=>{ try{ playClickSound(); }catch(e){} signInWithGoogle(); });
+  document.getElementById('btnGoogleSignOut')?.addEventListener('click', ()=>{ try{ playClickSound(); }catch(e){} signOutGoogle(); });
+
+  
+  /* ===== UPI plans → Google Apps Script → Telegram ===== */
+  // TODO: set your values
+  const FORM_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbw_E5uh-tl0mHkF_6nUbq4M2QyRwrkz9Z_Gk9xbZaz-fnpeajordMPQxQWZD1ee4CT4/exec';
+  const UPI_ID = 'sonu77370725@axl';
+  const UPI_QR_URL = ''; // optional: QR image URL
+
+  const PLAN_MAP = {
+    m1: { label: '1 Month', amount: 199, days: 30 },
+    m2: { label: '2 Months', amount: 299, days: 60 },
+    m3: { label: '3 Months', amount: 399, days: 90 }
+  };
+
+  /* ===== Pay Now → UPI deep link → auto-reveal submit on return ===== */
+  const PAY_STATE_KEY = 'gmax_pay_state'; // { plan:'m2', ts:1234567890 }
+
+  function buildUpiLink(plan, amount, label){
+    // pa = payee VPA, pn = payee name, am = amount, cu = INR, tn = transaction note
+    const pa = encodeURIComponent(UPI_ID);
+    const pn = encodeURIComponent('GMAX Hub');
+    const am = encodeURIComponent(String(amount));
+    const tn = encodeURIComponent('GMAX - ' + label);
+    return 'upi://pay?pa=' + pa + '&pn=' + pn + '&am=' + am + '&cu=INR&tn=' + tn;
+  }
+
+  function savePayState(plan){
+    try{ localStorage.setItem(PAY_STATE_KEY, JSON.stringify({ plan:plan, ts: Date.now() })); }catch(e){}
+  }
+  function readPayState(){
+    try{ const s = JSON.parse(localStorage.getItem(PAY_STATE_KEY)||'null'); return s && s.plan ? s : null; }catch(e){ return null; }
+  }
+  function clearPayState(){
+    try{ localStorage.removeItem(PAY_STATE_KEY); }catch(e){}
+  }
+
+  function buildDeepLinks(){
+    document.querySelectorAll('.plan-pay').forEach(a=>{
+      const plan   = a.getAttribute('data-plan');
+      const amount = a.getAttribute('data-amount');
+      const label  = a.getAttribute('data-label');
+      if(!plan || !amount) return;
+      a.setAttribute('href', buildUpiLink(plan, amount, label));
+    });
+  }
+
+  function bindPayNow(root){
+    (root||document).querySelectorAll('.plan-pay').forEach(a=>{
+      if(a.__bound) return; a.__bound = true;
+      a.addEventListener('click', (e)=>{
+        const plan = a.getAttribute('data-plan');
+        const amount = a.getAttribute('data-amount');
+        const label  = a.getAttribute('data-label');
+        if(!plan) return;
+        // Save state BEFORE launching the UPI app so a backgrounded browser reload remembers it.
+        savePayState(plan);
+        // Visual feedback immediately
+        document.querySelectorAll('.plan-pay').forEach(x=>x.classList.remove('is-pending'));
+        a.classList.add('is-pending');
+        // Bring up the panel + form so when user returns, UTR box is already visible
+        try{
+          // simulate plan click
+          const planBtn = document.querySelector('.plan-btn[data-plan="'+plan+'"]');
+          if(planBtn) planBtn.click();
+        }catch(_){ }
+        // Phone-only hint
+        if(!/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)){
+          // desktop: don't block, but warn once
+          console.info('UPI deep links open on phones (UPI app) only.');
+        }
+      }, { capture:true });
+    });
+  }
+
+  function applyPayReturnState(){
+    const st = readPayState();
+    if(!st || !st.plan) return;
+    const plan   = st.plan;
+    const amount = (PLAN_MAP[plan] && PLAN_MAP[plan].amount) || (document.querySelector('.plan-btn[data-plan="'+plan+'"]')?.getAttribute('data-amount')) || '199';
+    const label  = (PLAN_MAP[plan] && PLAN_MAP[plan].label)  || (document.querySelector('.plan-btn[data-plan="'+plan+'"]')?.getAttribute('data-label')) || plan;
+
+    // Activate the matching plan (so pay-panel opens) and pre-fill hidden fields
+    const planBtn = document.querySelector('.plan-btn[data-plan="'+plan+'"]');
+    if(planBtn){ try{ planBtn.click(); }catch(e){} }
+    const planIn = document.getElementById('payPlan');
+    const amtIn  = document.getElementById('payAmount');
+    if(planIn) planIn.value = plan;
+    if(amtIn)  amtIn.value  = amount;
+
+    // Show the "welcome back" banner
+    const hint = document.getElementById('payReturnHint');
+    if(hint) hint.hidden = false;
+
+    // Apply the 'pending' visual to the matching Pay Now button (it might still be in DOM)
+    const payA = document.querySelector('.plan-pay[data-plan="'+plan+'"]');
+    if(payA){ payA.classList.add('is-pending'); }
+
+    // Scroll the UTR input into view so user sees it the moment they return
+    const utr = document.getElementById('payUtr');
+    if(utr){
+      try{ utr.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
+      // Don't auto-focus on mobile (would pop up keyboard and block view)
+      if(!/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)){
+        try{ setTimeout(()=>utr.focus({preventScroll:true}), 350); }catch(e){}
+      }
+    }
+  }
+
+  // Run when DOM ready + on visibility change (user comes back from UPI app) + on Pageshow (bfcache)
+  function initPayNowFlow(){
+    try{ buildDeepLinks(); }catch(e){}
+    try{ bindPayNow(); }catch(e){}
+    try{ applyPayReturnState(); }catch(e){}
+  }
+
+  
+  /* Subscribe page navigation */
+  function openSubscribePage(){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const el = document.getElementById('screenSubscribe');
+    if(el) el.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    try{ playClickSound(); }catch(e){}
+    window.scrollTo(0,0);
+  }
+  function closeSubscribePage(){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const home = document.getElementById('screenHome');
+    if(home) home.classList.add('active');
+    const homeTab = document.querySelector('.tab[data-tab="home"]');
+    if(homeTab){
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      homeTab.classList.add('active');
+      try{ moveTabIndicator(homeTab); }catch(e){}
+    }
+  }
+  document.getElementById('btnOpenSubscribe')?.addEventListener('click', openSubscribePage);
+  document.getElementById('btnSubBack')?.addEventListener('click', closeSubscribePage);
+
+  function setupUpiPayUI(){
+    const upiEl = document.getElementById('payUpiId');
+    if(upiEl) upiEl.textContent = UPI_ID;
+    const qrBox = document.getElementById('payQrBox');
+    if(qrBox && UPI_QR_URL){
+      qrBox.innerHTML = '<img src="'+UPI_QR_URL.replace(/"/g,'')+'" alt="UPI QR"/>';
+    }
+    document.getElementById('btnCopyUpi')?.addEventListener('click', async ()=>{
+      try{
+        await navigator.clipboard.writeText(UPI_ID);
+        const b = document.getElementById('btnCopyUpi');
+        if(b){ const t=b.textContent; b.textContent='Copied'; setTimeout(()=>b.textContent=t,1200); }
+      }catch(e){ alert('UPI: '+UPI_ID); }
+    });
+    document.querySelectorAll('.plan-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.plan-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const plan = btn.getAttribute('data-plan');
+        const amount = btn.getAttribute('data-amount');
+        const label = btn.getAttribute('data-label');
+        const panel = document.getElementById('payPanel');
+        if(panel) panel.hidden = false;
+        const title = document.getElementById('payPanelTitle');
+        if(title) title.textContent = 'Pay ₹'+amount+' · '+label;
+        const hp = document.getElementById('payPlan');
+        const ha = document.getElementById('payAmount');
+        if(hp) hp.value = plan;
+        if(ha) ha.value = amount;
+        try{ playClickSound(); }catch(e){}
+        panel && panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      });
+    });
+    document.getElementById('payForm')?.addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      const msg = document.getElementById('payFormMsg');
+      const sub = document.getElementById('paySubmitBtn');
+      const name = (document.getElementById('payName')?.value||'').trim();
+      const email = (document.getElementById('payEmail')?.value||'').trim();
+      const mobile = (document.getElementById('payMobile')?.value||'').trim();
+      const utr = (document.getElementById('payUtr')?.value||'').replace(/\s/g,'');
+      const plan = document.getElementById('payPlan')?.value||'m1';
+      const amount = document.getElementById('payAmount')?.value||'199';
+      const planLabel = (PLAN_MAP[plan]&&PLAN_MAP[plan].label)||plan;
+      if(!/^\d{12}$/.test(utr)){
+        if(msg) msg.textContent = 'UTR must be exactly 12 digits';
+        return;
+      }
+      if(!FORM_WEBAPP_URL || FORM_WEBAPP_URL.indexOf('YOUR_WEBAPP')>=0){
+        if(msg) msg.textContent = 'Set FORM_WEBAPP_URL (Google Apps Script Web App URL)';
+        return;
+      }
+      if(msg) msg.textContent = 'Submitting…';
+      if(sub) sub.disabled = true;
+      try{
+        const res = await fetch(FORM_WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            name: name,
+            email: email,
+            mobile: mobile,
+            utr: utr,
+            plan: planLabel,
+            amount: amount
+          })
+        });
+        let d = {};
+        try{ d = await res.json(); }catch(e){ d = { ok: true }; }
+        if(d.ok === false){
+          if(msg) msg.textContent = d.error || 'Submit failed';
+          if(sub) sub.disabled = false;
+          return;
+        }
+        if(msg) msg.textContent = '';
+        document.getElementById('payForm')?.reset();
+        const modal = document.getElementById('paySuccessModal');
+        if(modal) modal.hidden = false;
+        if(sub) sub.disabled = false;
+        try{ clearPayState(); document.querySelectorAll('.plan-pay.is-pending').forEach(x=>x.classList.remove('is-pending')); }catch(e){}
+      }catch(e){
+        if(msg) msg.textContent = 'Network error: '+(e.message||'');
+        if(sub) sub.disabled = false;
+      }
+    });
+    document.getElementById('paySuccessClose')?.addEventListener('click', ()=>{
+      const modal = document.getElementById('paySuccessModal');
+      if(modal) modal.hidden = true;
+    });
+  }
+
   /* init */
+  try{ setupUpiPayUI(); }catch(e){}
   loadTheme();
+  try{ initSupabase(); }catch(e){}
   try{ applyProfileUI(); }catch(e){}
   applyUnlockState();
   showAdmin();
-  loadSharedContent(); // server se posts/stories/brand — refresh par bhi
+  loadSharedContent(); // loads posts/stories/brand from the server — also on refresh
+  try{ initPayNowFlow(); }catch(e){}
+
+  /* Run on every page-show / app-return so user sees the Submit form when they come back from the UPI app. */
+  window.addEventListener('pageshow', ()=>{ try{ initPayNowFlow(); }catch(e){} });
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible'){
+      try{ initPayNowFlow(); }catch(e){}
+    }
+  });
+  // Also re-bind whenever admin publishes (DOM may re-render plan buttons after returning to subscribe tab)
+  setInterval(()=>{ try{ bindPayNow(); }catch(e){} }, 1500);
+
+  /* Reel rebind on DOM changes (after every renderPosts / dynamic content) */
+  if(!window.__reelBindMO){
+    window.__reelBindMO = new MutationObserver(()=>{ try{ bindReels(); watchNewReels(); }catch(e){} });
+    window.__reelBindMO.observe(document.body, { childList:true, subtree:true });
+  }
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
