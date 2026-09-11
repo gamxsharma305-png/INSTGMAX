@@ -1,6 +1,5 @@
 /**
  * POST /api/submit-payment
- * Sends payment request to Telegram. Does NOT use Google Apps Script (that was chat not found / 302).
  * Body: { name, email, mobile, utr, plan, amount }
  */
 const crypto = require('crypto');
@@ -55,8 +54,19 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'Invalid form data' });
   }
 
-  const id = crypto.randomBytes(6).toString('hex'); // 12 chars, fits callback_data
-  const record = { id, name, email, mobile, utr, plan, amount, createdAt: new Date().toISOString() };
+  const id = crypto.randomBytes(6).toString('hex');
+  const record = {
+    id,
+    name,
+    email,
+    mobile,
+    utr,
+    plan,
+    amount,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+
   try {
     await redisSet('gmax:pay:' + id, record, 14 * 24 * 60 * 60);
   } catch (_) {}
@@ -84,6 +94,7 @@ module.exports = async function handler(req, res) {
       }
     })
   });
+
   const tgJson = await tg.json().catch(() => ({}));
   if (!tgJson.ok) {
     return res.status(200).json({
@@ -91,6 +102,6 @@ module.exports = async function handler(req, res) {
       error: 'Telegram failed: ' + (tgJson.description || 'unknown')
     });
   }
+
   return res.status(200).json({ ok: true, message: 'Submitted', id: id });
 };
-
