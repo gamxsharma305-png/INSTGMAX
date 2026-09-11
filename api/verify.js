@@ -1,9 +1,7 @@
 /**
  * POST /api/verify
  * Body: { code, deviceId }
- * - Monthly paid pass (Redis) — device bound, 30 days
- * - Trial 36h AroLinks-style HMAC code
- * On success: tracks unique device in day/month stats (not on page visit)
+ * Monthly pass: first device that uses the code gets bound.
  */
 const crypto = require('crypto');
 
@@ -51,7 +49,15 @@ async function redisGet(key) {
   return typeof v === 'object' && v ? v : null;
 }
 
-/** Unique unlock user → day + month sets (deviceId) */
+async function redisSet(key, value, expSeconds) {
+  const { url, token } = redisEnv();
+  if (!url || !token) return false;
+  let path = url + '/set/' + encodeURIComponent(key) + '/' + encodeURIComponent(JSON.stringify(value));
+  if (expSeconds) path += '?EX=' + expSeconds;
+  const r = await fetch(path, { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+  return r.ok;
+}
+
 async function trackUnlock(deviceId) {
   const { url, token } = redisEnv();
   if (!url || !token || !deviceId) return;
@@ -62,21 +68,11 @@ async function trackUnlock(deviceId) {
   const mkey = 'gmax:stats:month:' + month;
   const headers = { Authorization: 'Bearer ' + token };
   const id = getDeviceSafe(deviceId);
-
   try {
-    await fetch(url + '/sadd/' + encodeURIComponent(dkey) + '/' + encodeURIComponent(id), {
-      method: 'POST', headers
-    });
-    await fetch(url + '/sadd/' + encodeURIComponent(mkey) + '/' + encodeURIComponent(id), {
-      method: 'POST', headers
-    });
-    // ~40 days TTL
-    await fetch(url + '/expire/' + encodeURIComponent(dkey) + '/3456000', {
-      method: 'POST', headers
-    });
-    await fetch(url + '/expire/' + encodeURIComponent(mkey) + '/3456000', {
-      method: 'POST', headers
-    });
+    await fetch(url + '/sadd/' + encodeURIComponent(dkey) + '/' + encodeURIComponent(id), { method: 'POST', headers });
+    await fetch(url + '/sadd/' + encodeURIComponent(mkey) + '/' + encodeURIComponent(id), { method: 'POST', headers });
+    await fetch(url + '/expire/' + encodeURIComponent(dkey) + '/3456000', { method: 'POST', headers });
+    await fetch(url + '/expire/' + encodeURIComponent(mkey) + '/3456000', { method: 'POST', headers });
   } catch (_) {}
 }
 
@@ -101,12 +97,16 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ ok: false, error: '12-digit code required' });
   }
 
-  // 1) Paid monthly pass (Redis) — device bound
   try {
     const rec = await redisGet(PASS_PREFIX + code);
     if (rec && rec.plan === 'month' && rec.until > Date.now()) {
-      const bound = getDeviceSafe(rec.deviceId);
-      if (bound !== deviceId) {
+      const boundRaw = String(rec.deviceId || '').trim();
+      const unbound = !boundRaw || boundRaw === 'OPEN' || getDeviceSafe(boundRaw) === 'XXXXXXXXXXXX';
+      if (unbound) {
+        rec.deviceId = deviceId;
+        const ttl = Math.max(60, Math.floor((rec.until - Date.now()) / 1000));
+        await redisSet(PASS_PREFIX + code, rec, ttl);
+      } else if (getDeviceSafe(rec.deviceId) !== deviceId) {
         return res.status(403).json({
           ok: false,
           error: 'Ye code kisi aur device ke liye hai. Sirf payment wale phone par chalega.'
@@ -117,14 +117,11 @@ module.exports = async function handler(req, res) {
         ok: true,
         until: rec.until,
         plan: 'month',
-        days: 30
+        days: rec.days || 30
       });
     }
-  } catch (e) {
-    // fall through
-  }
+  } catch (e) {}
 
-  // 2) 36-hour trial code (AroLinks / get-key)
   const bucket = Math.floor(Date.now() / (36 * 60 * 60 * 1000));
   const valid =
     code === makeCode(deviceId, secret, bucket) ||

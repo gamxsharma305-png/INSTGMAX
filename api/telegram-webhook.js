@@ -1,12 +1,14 @@
 /**
  * POST /api/telegram-webhook
- * Set Telegram webhook to: https://instgmax.vercel.app/api/telegram-webhook
- * Approve -> optional Google Sheet via Script 2 GET
+ * Webhook MUST be: https://instgmax.vercel.app/api/telegram-webhook
  */
+const crypto = require('crypto');
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8654144417:AAH-RzyTAYavTNRk-cHbVzoxKMX_KKCgOGI';
 const SHEET_WEBAPP =
   process.env.SHEET_WEBAPP_URL ||
   'https://script.google.com/macros/s/AKfycbznvyS8EYSRIQUwnE6mvExjAIZEKEJwPauczIRvY32T5AcOn_bJTtvWmkXcldUXgnBZ/exec';
+const PASS_PREFIX = 'lumina:pass:';
 
 function redisEnv() {
   const url = String(process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
@@ -23,17 +25,69 @@ async function redisGet(key) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.result == null || j.result === '') return null;
   let v = j.result;
-  try { if (typeof v === 'string') v = JSON.parse(v); } catch (_) {}
-  try { if (typeof v === 'string') v = JSON.parse(v); } catch (_) {}
+  for (let i = 0; i < 3; i++) {
+    if (typeof v === 'object' && v !== null) return v;
+    if (typeof v !== 'string') break;
+    try { v = JSON.parse(v); } catch (_) { return null; }
+  }
   return typeof v === 'object' && v ? v : null;
 }
 
+async function redisSet(key, value, expSeconds) {
+  const { url, token } = redisEnv();
+  if (!url || !token) return false;
+  let path = url + '/set/' + encodeURIComponent(key) + '/' + encodeURIComponent(JSON.stringify(value));
+  if (expSeconds) path += '?EX=' + expSeconds;
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  return r.ok;
+}
+
 async function tg(method, payload) {
-  await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/' + method, {
+  const r = await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/' + method, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+  return r.json().catch(() => ({}));
+}
+
+function parseFromMessage(text) {
+  const t = String(text || '');
+  const grab = (label) => {
+    const m = t.match(new RegExp(label + ':\\s*(.+)','i'));
+    return m ? m[1].trim() : '';
+  };
+  const planLine = grab('Plan');
+  let plan = planLine;
+  let amount = '';
+  const am = planLine.match(/Rs\\s*(\\d+)/i);
+  if (am) amount = am[1];
+  plan = planLine.replace(/\\(Rs.*\\)/i, '').trim();
+  return {
+    name: grab('Name'),
+    email: grab('Email'),
+    mobile: grab('Mobile'),
+    utr: grab('UTR'),
+    plan: plan,
+    amount: amount
+  };
+}
+
+function planDays(plan) {
+  const p = String(plan || '').toLowerCase();
+  if (p.indexOf('3') >= 0 || p.indexOf('399') >= 0) return 90;
+  if (p.indexOf('2') >= 0 || p.indexOf('299') >= 0) return 60;
+  return 30;
+}
+
+function makeCode() {
+  let s = '';
+  const buf = crypto.randomBytes(12);
+  for (let i = 0; i < 12; i++) s += String(buf[i] % 10);
+  return s;
 }
 
 module.exports = async function handler(req, res) {
@@ -51,14 +105,18 @@ module.exports = async function handler(req, res) {
   const id = data.substring(2);
   const chatId = cq.message && cq.message.chat && cq.message.chat.id;
   const messageId = cq.message && cq.message.message_id;
+  const msgText = (cq.message && cq.message.text) || '';
 
-  const rec = await redisGet('gmax:pay:' + id).catch(() => null);
-  const name = (rec && rec.name) || '';
-  const email = (rec && rec.email) || '';
-  const mobile = (rec && rec.mobile) || '';
-  const utr = (rec && rec.utr) || '';
-  const plan = (rec && rec.plan) || '';
-  const amount = (rec && rec.amount) || '';
+  let rec = await redisGet('gmax:pay:' + id).catch(() => null);
+  if (!rec) rec = parseFromMessage(msgText);
+
+  const name = rec.name || '';
+  const email = rec.email || '';
+  const mobile = rec.mobile || '';
+  const utr = rec.utr || '';
+  const plan = rec.plan || '';
+  const amount = rec.amount || '';
+  const days = planDays(plan);
 
   if (action === 'D') {
     await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rejected' });
@@ -71,27 +129,44 @@ module.exports = async function handler(req, res) {
   }
 
   if (action === 'A') {
-    const days = /3|399/.test(String(plan)) ? 90 : /2|299/.test(String(plan)) ? 60 : 30;
-    const expiry = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN');
+    const until = Date.now() + days * 24 * 60 * 60 * 1000;
+    const code = makeCode();
+    const expSec = days * 24 * 60 * 60 + 86400;
 
-    // Save to Google Sheet via Script 2 GET (GET works; Telegram POST webhook on GAS returns 302)
+    try {
+      await redisSet(PASS_PREFIX + code, {
+        plan: 'month',
+        until: until,
+        deviceId: '',
+        email: email,
+        name: name,
+        days: days,
+        utr: utr
+      }, expSec);
+    } catch (_) {}
+
     try {
       const qs = new URLSearchParams({
         action: 'approve',
-        name, email, mobile, utr, plan, amount, days: String(days)
+        name, email, mobile, utr, plan, amount,
+        days: String(days),
+        code: code
       });
       await fetch(SHEET_WEBAPP + '?' + qs.toString(), { redirect: 'follow' });
     } catch (_) {}
 
-    await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Saved' });
+    const expiry = new Date(until).toLocaleDateString('en-IN');
+    await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Approved' });
     await tg('editMessageText', {
       chat_id: chatId,
       message_id: messageId,
       text:
-        'APPROVED & SAVED\n\n' +
+        'APPROVED\n\n' +
         'Name: ' + name + '\nEmail: ' + email + '\nMobile: ' + mobile +
         '\nUTR: ' + utr + '\nPlan: ' + plan + ' (Rs ' + amount + ')' +
-        '\nExpiry: ' + expiry
+        '\nExpiry: ' + expiry +
+        '\n\nUNLOCK CODE (12 digit):\n' + code +
+        '\n\nUser ko ye code Unlock box me dalna hai.'
     });
     return res.status(200).send('OK');
   }
