@@ -1,6 +1,6 @@
 /**
  * POST /api/telegram-webhook
- * Webhook MUST be: https://instgmax.vercel.app/api/telegram-webhook
+ * Webhook: https://instgmax.vercel.app/api/telegram-webhook
  */
 const crypto = require('crypto');
 
@@ -54,28 +54,6 @@ async function tg(method, payload) {
   return r.json().catch(() => ({}));
 }
 
-function parseFromMessage(text) {
-  const t = String(text || '');
-  const grab = (label) => {
-    const m = t.match(new RegExp(label + ':\\s*(.+)','i'));
-    return m ? m[1].trim() : '';
-  };
-  const planLine = grab('Plan');
-  let plan = planLine;
-  let amount = '';
-  const am = planLine.match(/Rs\\s*(\\d+)/i);
-  if (am) amount = am[1];
-  plan = planLine.replace(/\\(Rs.*\\)/i, '').trim();
-  return {
-    name: grab('Name'),
-    email: grab('Email'),
-    mobile: grab('Mobile'),
-    utr: grab('UTR'),
-    plan: plan,
-    amount: amount
-  };
-}
-
 function planDays(plan) {
   const p = String(plan || '').toLowerCase();
   if (p.indexOf('3') >= 0 || p.indexOf('399') >= 0) return 90;
@@ -92,11 +70,13 @@ function makeCode() {
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).send('OK');
+
   let update = req.body;
   if (typeof update === 'string') {
     try { update = JSON.parse(update); } catch (_) { update = {}; }
   }
   update = update || {};
+
   const cq = update.callback_query;
   if (!cq) return res.status(200).send('OK');
 
@@ -105,10 +85,8 @@ module.exports = async function handler(req, res) {
   const id = data.substring(2);
   const chatId = cq.message && cq.message.chat && cq.message.chat.id;
   const messageId = cq.message && cq.message.message_id;
-  const msgText = (cq.message && cq.message.text) || '';
 
-  let rec = await redisGet('gmax:pay:' + id).catch(() => null);
-  if (!rec) rec = parseFromMessage(msgText);
+  let rec = await redisGet('gmax:pay:' + id).catch(() => null) || {};
 
   const name = rec.name || '';
   const email = rec.email || '';
@@ -119,6 +97,10 @@ module.exports = async function handler(req, res) {
   const days = planDays(plan);
 
   if (action === 'D') {
+    try {
+      await redisSet('gmax:pay:' + id, { ...rec, status: 'rejected' }, 14 * 24 * 60 * 60);
+    } catch (_) {}
+
     await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rejected' });
     await tg('editMessageText', {
       chat_id: chatId,
@@ -133,6 +115,7 @@ module.exports = async function handler(req, res) {
     const code = makeCode();
     const expSec = days * 24 * 60 * 60 + 86400;
 
+    // 1. Save unlock code for user
     try {
       await redisSet(PASS_PREFIX + code, {
         plan: 'month',
@@ -145,6 +128,17 @@ module.exports = async function handler(req, res) {
       }, expSec);
     } catch (_) {}
 
+    // 2. Update payment record so frontend can pick the code
+    try {
+      await redisSet('gmax:pay:' + id, {
+        ...rec,
+        status: 'approved',
+        unlockCode: code,
+        approvedAt: new Date().toISOString()
+      }, 14 * 24 * 60 * 60);
+    } catch (_) {}
+
+    // 3. Save to Google Sheet
     try {
       const qs = new URLSearchParams({
         action: 'approve',
@@ -156,6 +150,7 @@ module.exports = async function handler(req, res) {
     } catch (_) {}
 
     const expiry = new Date(until).toLocaleDateString('en-IN');
+
     await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Approved' });
     await tg('editMessageText', {
       chat_id: chatId,
@@ -165,9 +160,9 @@ module.exports = async function handler(req, res) {
         'Name: ' + name + '\nEmail: ' + email + '\nMobile: ' + mobile +
         '\nUTR: ' + utr + '\nPlan: ' + plan + ' (Rs ' + amount + ')' +
         '\nExpiry: ' + expiry +
-        '\n\nUNLOCK CODE (12 digit):\n' + code +
-        '\n\nUser ko ye code Unlock box me dalna hai.'
+        '\n\nUNLOCK CODE:\n' + code
     });
+
     return res.status(200).send('OK');
   }
 
