@@ -950,9 +950,31 @@
             <button class="btn btn-primary" type="submit" id="paySubmitBtn">Submit for approval</button>
           </form>
           <p id="payFormMsg" class="pay-note"></p>
+
+          <!-- Waiting for approval -->
+          <div id="payWaitingBox" style="display:none; text-align:center; padding:30px 20px;">
+            <div style="width:48px;height:48px;border:4px solid rgba(255,255,255,0.15);border-top-color:var(--accent,#d4a017);border-radius:50%;margin:0 auto 18px;animation:gmaxSpin 0.9s linear infinite;"></div>
+            <h3 style="margin:0 0 8px;font-size:18px;">Payment Under Process</h3>
+            <p style="color:var(--muted,#aaa);font-size:14px;margin:0;line-height:1.5;">Please wait while we verify your payment...<br>Do not close this page.</p>
+          </div>
+
+          <!-- Unlock Code Box -->
+          <div id="payCodeBox" style="display:none; text-align:center; padding:24px 16px;">
+            <h3 style="margin:0 0 6px;color:#22c55e;">Payment Approved!</h3>
+            <p style="color:var(--muted,#aaa);font-size:13px;margin:0 0 14px;">Your Unlock Code is ready. Copy and use it.</p>
+            <div style="display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;">
+              <code id="payUnlockCode" style="font-size:20px;letter-spacing:2px;background:rgba(0,0,0,0.35);padding:12px 18px;border-radius:10px;user-select:all;"></code>
+              <button type="button" class="btn btn-primary" id="btnCopyUnlockCode">Copy Code</button>
+            </div>
+            <p style="margin-top:16px;font-size:13px;color:var(--muted,#aaa);">Go to Unlock section and paste this code.</p>
+          </div>
         </div>
       </div>
     </section>
+
+    <style>
+      @keyframes gmaxSpin { to { transform: rotate(360deg); } }
+    </style>
 
 <section class="screen" id="screenAdmin">
       <div class="admin-wrap">
@@ -2353,16 +2375,12 @@
         if(msg) msg.textContent = 'UTR must be exactly 12 digits';
         return;
       }
-      if(!FORM_WEBAPP_URL || FORM_WEBAPP_URL.indexOf('YOUR_WEBAPP')>=0){
-        if(msg) msg.textContent = 'Set FORM_WEBAPP_URL (Google Apps Script Web App URL)';
-        return;
-      }
       if(msg) msg.textContent = 'Submitting…';
       if(sub) sub.disabled = true;
       try{
-        const res = await fetch(FORM_WEBAPP_URL, {
+        const res = await fetch('/api/submit-payment', {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: name,
             email: email,
@@ -2373,23 +2391,72 @@
           })
         });
         let d = {};
-        try{ d = await res.json(); }catch(e){ d = { ok: true }; }
+        try{ d = await res.json(); }catch(e){ d = { ok: false }; }
         if(d.ok === false){
           if(msg) msg.textContent = d.error || 'Submit failed';
           if(sub) sub.disabled = false;
           return;
         }
         if(msg) msg.textContent = '';
-        document.getElementById('payForm')?.reset();
-        const modal = document.getElementById('paySuccessModal');
-        if(modal) modal.hidden = false;
-        if(sub) sub.disabled = false;
+        // Hide form, show waiting animation
+        const formEl = document.getElementById('payForm');
+        if(formEl) formEl.style.display = 'none';
+        const waitBox = document.getElementById('payWaitingBox');
+        if(waitBox) waitBox.style.display = 'block';
+        const codeBox = document.getElementById('payCodeBox');
+        if(codeBox) codeBox.style.display = 'none';
         try{ clearPayState(); document.querySelectorAll('.plan-pay.is-pending').forEach(x=>x.classList.remove('is-pending')); }catch(e){}
+        // Start polling for approval
+        if(d.id) startPaymentPolling(d.id);
+        if(sub) sub.disabled = false;
       }catch(e){
         if(msg) msg.textContent = 'Network error: '+(e.message||'');
         if(sub) sub.disabled = false;
       }
     });
+
+    // Poll payment status every 3 seconds
+    function startPaymentPolling(id){
+      let tries = 0;
+      const maxTries = 120; // ~6 minutes
+      const timer = setInterval(async ()=>{
+        tries++;
+        if(tries > maxTries){ clearInterval(timer); return; }
+        try{
+          const res = await fetch('/api/payment-status?id=' + encodeURIComponent(id));
+          const data = await res.json();
+          if(data.status === 'approved' && data.unlockCode){
+            clearInterval(timer);
+            const waitBox = document.getElementById('payWaitingBox');
+            if(waitBox) waitBox.style.display = 'none';
+            const codeBox = document.getElementById('payCodeBox');
+            if(codeBox) codeBox.style.display = 'block';
+            const codeEl = document.getElementById('payUnlockCode');
+            if(codeEl) codeEl.textContent = data.unlockCode;
+          }
+          if(data.status === 'rejected'){
+            clearInterval(timer);
+            const waitBox = document.getElementById('payWaitingBox');
+            if(waitBox) waitBox.style.display = 'none';
+            const formEl = document.getElementById('payForm');
+            if(formEl) formEl.style.display = 'block';
+            const msg = document.getElementById('payFormMsg');
+            if(msg) msg.textContent = 'Payment was rejected. Please contact support.';
+          }
+        }catch(e){}
+      }, 3000);
+    }
+
+    // Copy unlock code button
+    document.getElementById('btnCopyUnlockCode')?.addEventListener('click', ()=>{
+      const code = document.getElementById('payUnlockCode')?.textContent || '';
+      if(!code) return;
+      navigator.clipboard.writeText(code).then(()=>{
+        const btn = document.getElementById('btnCopyUnlockCode');
+        if(btn){ const t = btn.textContent; btn.textContent = 'Copied!'; setTimeout(()=>btn.textContent=t, 2000); }
+      }).catch(()=>{});
+    });
+
     document.getElementById('paySuccessClose')?.addEventListener('click', ()=>{
       const modal = document.getElementById('paySuccessModal');
       if(modal) modal.hidden = true;
