@@ -950,30 +950,33 @@
             <button class="btn btn-primary" type="submit" id="paySubmitBtn">Submit for approval</button>
           </form>
           <p id="payFormMsg" class="pay-note"></p>
-
-          <!-- Waiting for approval -->
-          <div id="payWaitingBox" style="display:none; text-align:center; padding:30px 20px;">
-            <div style="width:48px;height:48px;border:4px solid rgba(255,255,255,0.15);border-top-color:var(--accent,#d4a017);border-radius:50%;margin:0 auto 18px;animation:gmaxSpin 0.9s linear infinite;"></div>
-            <h3 style="margin:0 0 8px;font-size:18px;">Payment Under Process</h3>
-            <p style="color:var(--muted,#aaa);font-size:14px;margin:0;line-height:1.5;">Please wait while we verify your payment...<br>Do not close this page.</p>
-          </div>
-
-          <!-- Unlock Code Box -->
-          <div id="payCodeBox" style="display:none; text-align:center; padding:24px 16px;">
-            <h3 style="margin:0 0 6px;color:#22c55e;">Payment Approved!</h3>
-            <p style="color:var(--muted,#aaa);font-size:13px;margin:0 0 14px;">Your Unlock Code is ready. Copy and use it.</p>
-            <div style="display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;">
-              <code id="payUnlockCode" style="font-size:20px;letter-spacing:2px;background:rgba(0,0,0,0.35);padding:12px 18px;border-radius:10px;user-select:all;"></code>
-              <button type="button" class="btn btn-primary" id="btnCopyUnlockCode">Copy Code</button>
-            </div>
-            <p style="margin-top:16px;font-size:13px;color:var(--muted,#aaa);">Go to Unlock section and paste this code.</p>
-          </div>
         </div>
       </div>
     </section>
 
+    <!-- FULL SCREEN Payment Waiting Overlay -->
+    <div id="payWaitingBox" style="display:none; position:fixed; inset:0; z-index:99999; background:#0b0b0f; color:#fff; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;">
+      <div style="width:64px;height:64px;border:5px solid rgba(255,255,255,0.12);border-top-color:var(--accent,#d4a017);border-radius:50%;margin:0 auto 28px;animation:gmaxSpin 0.85s linear infinite;"></div>
+      <h2 style="margin:0 0 12px;font-size:24px;font-weight:700;">Payment Under Process</h2>
+      <p style="color:#aaa;font-size:15px;margin:0;line-height:1.6;max-width:320px;">Please wait while we verify your payment.<br>Do not close or refresh this page.</p>
+    </div>
+
+    <!-- FULL SCREEN Unlock Code Overlay -->
+    <div id="payCodeBox" style="display:none; position:fixed; inset:0; z-index:99999; background:#0b0b0f; color:#fff; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;">
+      <h2 style="margin:0 0 8px;font-size:24px;color:#22c55e;">Payment Approved!</h2>
+      <p style="color:#aaa;font-size:14px;margin:0 0 24px;">Your Unlock Code is ready. Copy and use it.</p>
+      <div style="display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
+        <code id="payUnlockCode" style="font-size:26px;letter-spacing:3px;background:rgba(255,255,255,0.08);padding:16px 22px;border-radius:12px;user-select:all;"></code>
+        <button type="button" class="btn btn-primary" id="btnCopyUnlockCode" style="padding:14px 20px;font-size:15px;">Copy Code</button>
+      </div>
+      <p style="font-size:14px;color:#aaa;margin:0 0 28px;">Go to Unlock section and paste this code.</p>
+      <button type="button" class="btn btn-ghost" id="btnCloseCodeBox" style="padding:12px 24px;">Continue</button>
+    </div>
+
     <style>
       @keyframes gmaxSpin { to { transform: rotate(360deg); } }
+      #payWaitingBox, #payCodeBox { display: none; }
+      #payWaitingBox[style*="flex"], #payCodeBox[style*="flex"] { display: flex !important; }
     </style>
 
 <section class="screen" id="screenAdmin">
@@ -2398,16 +2401,18 @@
           return;
         }
         if(msg) msg.textContent = '';
-        // Hide form, show waiting animation
-        const formEl = document.getElementById('payForm');
-        if(formEl) formEl.style.display = 'none';
+        // Full screen waiting overlay
         const waitBox = document.getElementById('payWaitingBox');
-        if(waitBox) waitBox.style.display = 'block';
+        if(waitBox) waitBox.style.display = 'flex';
         const codeBox = document.getElementById('payCodeBox');
         if(codeBox) codeBox.style.display = 'none';
         try{ clearPayState(); document.querySelectorAll('.plan-pay.is-pending').forEach(x=>x.classList.remove('is-pending')); }catch(e){}
+        // Save payment id so waiting survives refresh / back
+        try {
+          localStorage.setItem('gmax_pending_pay', JSON.stringify({ id: d.id, ts: Date.now() }));
+        } catch(e){}
         // Start polling for approval
-        if(d.id) startPaymentPolling(d.id);
+        if(d.id) window.startPaymentPolling(d.id);
         if(sub) sub.disabled = false;
       }catch(e){
         if(msg) msg.textContent = 'Network error: '+(e.message||'');
@@ -2416,7 +2421,7 @@
     });
 
     // Poll payment status every 3 seconds
-    function startPaymentPolling(id){
+    window.startPaymentPolling = function startPaymentPolling(id){
       let tries = 0;
       const maxTries = 120; // ~6 minutes
       const timer = setInterval(async ()=>{
@@ -2427,21 +2432,22 @@
           const data = await res.json();
           if(data.status === 'approved' && data.unlockCode){
             clearInterval(timer);
+            try { localStorage.removeItem('gmax_pending_pay'); } catch(e){}
             const waitBox = document.getElementById('payWaitingBox');
             if(waitBox) waitBox.style.display = 'none';
             const codeBox = document.getElementById('payCodeBox');
-            if(codeBox) codeBox.style.display = 'block';
+            if(codeBox) codeBox.style.display = 'flex';
             const codeEl = document.getElementById('payUnlockCode');
             if(codeEl) codeEl.textContent = data.unlockCode;
           }
           if(data.status === 'rejected'){
             clearInterval(timer);
+            try { localStorage.removeItem('gmax_pending_pay'); } catch(e){}
             const waitBox = document.getElementById('payWaitingBox');
             if(waitBox) waitBox.style.display = 'none';
-            const formEl = document.getElementById('payForm');
-            if(formEl) formEl.style.display = 'block';
-            const msg = document.getElementById('payFormMsg');
-            if(msg) msg.textContent = 'Payment was rejected. Please contact support.';
+            const codeBox = document.getElementById('payCodeBox');
+            if(codeBox) codeBox.style.display = 'none';
+            alert('Payment was rejected. Please contact support.');
           }
         }catch(e){}
       }, 3000);
@@ -2457,6 +2463,12 @@
       }).catch(()=>{});
     });
 
+    // Close code overlay
+    document.getElementById('btnCloseCodeBox')?.addEventListener('click', ()=>{
+      const codeBox = document.getElementById('payCodeBox');
+      if(codeBox) codeBox.style.display = 'none';
+    });
+
     document.getElementById('paySuccessClose')?.addEventListener('click', ()=>{
       const modal = document.getElementById('paySuccessModal');
       if(modal) modal.hidden = true;
@@ -2465,6 +2477,21 @@
 
   /* init */
   try{ setupUpiPayUI(); }catch(e){}
+
+  // Restore full-screen waiting after refresh / back
+  try {
+    const saved = JSON.parse(localStorage.getItem('gmax_pending_pay') || 'null');
+    if (saved && saved.id && (Date.now() - saved.ts < 6 * 60 * 60 * 1000)) {
+      const waitBox = document.getElementById('payWaitingBox');
+      if (waitBox) waitBox.style.display = 'flex';
+      const codeBox = document.getElementById('payCodeBox');
+      if (codeBox) codeBox.style.display = 'none';
+      setTimeout(function(){
+        try { window.startPaymentPolling && window.startPaymentPolling(saved.id); } catch(e){}
+      }, 400);
+    }
+  } catch(e){}
+
   loadTheme();
   try{ initSupabase(); }catch(e){}
   try{ applyProfileUI(); }catch(e){}
@@ -2474,7 +2501,17 @@
   try{ initPayNowFlow(); }catch(e){}
 
   /* Run on every page-show / app-return so user sees the Submit form when they come back from the UPI app. */
-  window.addEventListener('pageshow', ()=>{ try{ initPayNowFlow(); }catch(e){} });
+  window.addEventListener('pageshow', ()=>{
+    try{ initPayNowFlow(); }catch(e){}
+    // Keep full-screen waiting if payment still pending
+    try {
+      const saved = JSON.parse(localStorage.getItem('gmax_pending_pay') || 'null');
+      if (saved && saved.id && (Date.now() - saved.ts < 6 * 60 * 60 * 1000)) {
+        const waitBox = document.getElementById('payWaitingBox');
+        if (waitBox) waitBox.style.display = 'flex';
+      }
+    } catch(e){}
+  });
   document.addEventListener('visibilitychange', ()=>{
     if(document.visibilityState === 'visible'){
       try{ initPayNowFlow(); }catch(e){}
