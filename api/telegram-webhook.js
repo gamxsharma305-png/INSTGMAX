@@ -1,14 +1,11 @@
 /**
  * POST /api/telegram-webhook
- * Webhook: https://instgmax.vercel.app/api/telegram-webhook
+ * Approve = unlock that user's phone directly (no code sharing).
  */
-const crypto = require('crypto');
-
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8654144417:AAH-RzyTAYavTNRk-cHbVzoxKMX_KKCgOGI';
 const SHEET_WEBAPP =
   process.env.SHEET_WEBAPP_URL ||
   'https://script.google.com/macros/s/AKfycbznvyS8EYSRIQUwnE6mvExjAIZEKEJwPauczIRvY32T5AcOn_bJTtvWmkXcldUXgnBZ/exec';
-const PASS_PREFIX = 'lumina:pass:';
 
 function redisEnv() {
   const url = String(process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
@@ -61,13 +58,6 @@ function planDays(plan) {
   return 30;
 }
 
-function makeCode() {
-  let s = '';
-  const buf = crypto.randomBytes(12);
-  for (let i = 0; i < 12; i++) s += String(buf[i] % 10);
-  return s;
-}
-
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).send('OK');
 
@@ -87,20 +77,20 @@ module.exports = async function handler(req, res) {
   const messageId = cq.message && cq.message.message_id;
 
   let rec = await redisGet('gmax:pay:' + id).catch(() => null) || {};
-
   const name = rec.name || '';
   const email = rec.email || '';
   const mobile = rec.mobile || '';
   const utr = rec.utr || '';
   const plan = rec.plan || '';
   const amount = rec.amount || '';
+  const deviceId = rec.deviceId || '';
   const days = planDays(plan);
+  const expSec = days * 24 * 60 * 60 + 86400;
 
   if (action === 'D') {
     try {
-      await redisSet('gmax:pay:' + id, { ...rec, status: 'rejected' }, 14 * 24 * 60 * 60);
+      await redisSet('gmax:pay:' + id, Object.assign({}, rec, { status: 'rejected' }), 14 * 24 * 60 * 60);
     } catch (_) {}
-
     await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rejected' });
     await tg('editMessageText', {
       chat_id: chatId,
@@ -112,57 +102,44 @@ module.exports = async function handler(req, res) {
 
   if (action === 'A') {
     const until = Date.now() + days * 24 * 60 * 60 * 1000;
-    const code = makeCode();
-    const expSec = days * 24 * 60 * 60 + 86400;
 
-    // 1. Save unlock code for user
     try {
-      await redisSet(PASS_PREFIX + code, {
-        plan: 'month',
-        until: until,
-        deviceId: '',
-        email: email,
-        name: name,
-        days: days,
-        utr: utr
-      }, expSec);
-    } catch (_) {}
-
-    // 2. Update payment record so frontend can pick the code
-    try {
-      await redisSet('gmax:pay:' + id, {
-        ...rec,
+      await redisSet('gmax:pay:' + id, Object.assign({}, rec, {
         status: 'approved',
-        unlockCode: code,
+        until: until,
         approvedAt: new Date().toISOString()
-      }, 14 * 24 * 60 * 60);
+      }), 14 * 24 * 60 * 60);
     } catch (_) {}
 
-    // 3. Save to Google Sheet
+    if (deviceId) {
+      try {
+        await redisSet('gmax:access:' + deviceId, {
+          until: until,
+          plan: plan,
+          days: days,
+          email: email
+        }, expSec);
+      } catch (_) {}
+    }
+
     try {
       const qs = new URLSearchParams({
-        action: 'approve',
-        name, email, mobile, utr, plan, amount,
-        days: String(days),
-        code: code
+        action: 'approve', name, email, mobile, utr, plan, amount, days: String(days)
       });
       await fetch(SHEET_WEBAPP + '?' + qs.toString(), { redirect: 'follow' });
     } catch (_) {}
 
     const expiry = new Date(until).toLocaleDateString('en-IN');
-
-    await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Approved' });
+    await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'User unlocked' });
     await tg('editMessageText', {
       chat_id: chatId,
       message_id: messageId,
       text:
-        'APPROVED\n\n' +
+        'APPROVED \u2014 user auto-unlocked\n\n' +
         'Name: ' + name + '\nEmail: ' + email + '\nMobile: ' + mobile +
         '\nUTR: ' + utr + '\nPlan: ' + plan + ' (Rs ' + amount + ')' +
-        '\nExpiry: ' + expiry +
-        '\n\nUNLOCK CODE:\n' + code
+        '\nExpiry: ' + expiry
     });
-
     return res.status(200).send('OK');
   }
 

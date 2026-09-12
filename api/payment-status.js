@@ -1,6 +1,6 @@
 /**
- * GET /api/payment-status?id=xxxxxx
- * Returns current status of payment request
+ * GET /api/payment-status?id=xxxx
+ * GET /api/payment-status?deviceId=XXXX
  */
 function redisEnv() {
   const url = String(process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
@@ -32,21 +32,33 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'GET only' });
 
-  const id = String((req.query && req.query.id) || '').trim();
-  if (!id || id.length < 8) {
-    return res.status(400).json({ ok: false, error: 'Invalid id' });
+  const q = req.query || {};
+  const id = String(q.id || '').trim();
+  const deviceId = String(q.deviceId || '').trim();
+
+  if (id) {
+    const rec = await redisGet('gmax:pay:' + id).catch(() => null);
+    if (!rec) return res.status(200).json({ ok: true, status: 'not_found' });
+    return res.status(200).json({
+      ok: true,
+      status: rec.status || 'pending',
+      until: rec.until || 0,
+      plan: rec.plan || null
+    });
   }
 
-  const rec = await redisGet('gmax:pay:' + id).catch(() => null);
-
-  if (!rec) {
-    return res.status(200).json({ ok: true, status: 'not_found' });
+  if (deviceId) {
+    const rec = await redisGet('gmax:access:' + deviceId).catch(() => null);
+    if (!rec || !rec.until || rec.until < Date.now()) {
+      return res.status(200).json({ ok: true, status: 'none', until: 0 });
+    }
+    return res.status(200).json({
+      ok: true,
+      status: 'approved',
+      until: rec.until,
+      plan: rec.plan || null
+    });
   }
 
-  return res.status(200).json({
-    ok: true,
-    status: rec.status || 'pending',
-    unlockCode: rec.unlockCode || null,
-    name: rec.name || null
-  });
+  return res.status(400).json({ ok: false, error: 'id or deviceId required' });
 };

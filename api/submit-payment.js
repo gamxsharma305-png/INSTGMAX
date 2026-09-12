@@ -1,6 +1,6 @@
 /**
  * POST /api/submit-payment
- * Body: { name, email, mobile, utr, plan, amount }
+ * Body: { name, email, mobile, utr, plan, amount, deviceId }
  */
 const crypto = require('crypto');
 
@@ -49,6 +49,7 @@ module.exports = async function handler(req, res) {
   const utr = String(body.utr || '').replace(/\s/g, '');
   const plan = String(body.plan || '').trim();
   const amount = String(body.amount || '').trim();
+  const deviceId = String(body.deviceId || '').trim();
 
   if (!name || !email || !mobile || !/^\d{12}$/.test(utr)) {
     return res.status(400).json({ ok: false, error: 'Invalid form data' });
@@ -56,20 +57,12 @@ module.exports = async function handler(req, res) {
 
   const id = crypto.randomBytes(6).toString('hex');
   const record = {
-    id,
-    name,
-    email,
-    mobile,
-    utr,
-    plan,
-    amount,
+    id, name, email, mobile, utr, plan, amount, deviceId,
     status: 'pending',
     createdAt: new Date().toISOString()
   };
 
-  try {
-    await redisSet('gmax:pay:' + id, record, 14 * 24 * 60 * 60);
-  } catch (_) {}
+  try { await redisSet('gmax:pay:' + id, record, 14 * 24 * 60 * 60); } catch (_) {}
 
   const text =
     'New payment request\n\n' +
