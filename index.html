@@ -2389,7 +2389,8 @@
             mobile: mobile,
             utr: utr,
             plan: planLabel,
-            amount: amount
+            amount: amount,
+            deviceId: (typeof getDeviceId === 'function' ? getDeviceId() : '')
           })
         });
         let d = {};
@@ -2432,19 +2433,15 @@
         try{
           const res = await fetch('/api/payment-status?id=' + encodeURIComponent(id));
           const data = await res.json();
-          if(data.status === 'approved' && data.unlockCode){
+          if(data.status === 'approved' && data.until){
             clearInterval(timer);
             try { localStorage.removeItem('gmax_pending_pay'); } catch(e){}
-            const formEl = document.getElementById('payForm');
-            if(formEl) formEl.style.display = 'none';
+            try { setUntil(data.until); applyUnlockState(); } catch(e){}
             const waitBox = document.getElementById('payWaitingBox');
-            if(waitBox) waitBox.style.display = 'none';
-            const codeBox = document.getElementById('payCodeBox');
-            if(codeBox) codeBox.style.display = 'block';
-            const codeEl = document.getElementById('payUnlockCode');
-            if(codeEl) codeEl.textContent = data.unlockCode;
-            const panel = document.getElementById('payPanel');
-            if(panel) panel.hidden = false;
+            if(waitBox){
+              waitBox.innerHTML = '<h3 style="margin:0 0 8px">Approved</h3><p class="pay-note">Access active. Feed unlock ho gaya.</p>';
+            }
+            setTimeout(()=>{ try{ closeSubscribePage(); }catch(e){} }, 900);
           }
           if(data.status === 'rejected'){
             clearInterval(timer);
@@ -2479,6 +2476,17 @@
 
   /* init */
   try{ setupUpiPayUI(); }catch(e){}
+  try{
+    const did = getDeviceId();
+    fetch('/api/payment-status?deviceId=' + encodeURIComponent(did))
+      .then(r=>r.json())
+      .then(d=>{
+        if(d && d.status === 'approved' && d.until > Date.now()){
+          setUntil(d.until);
+          applyUnlockState();
+        }
+      }).catch(()=>{});
+  }catch(e){}
 
   // If payment still pending, restore waiting only inside payment panel
   function restorePendingPaymentUI(){
