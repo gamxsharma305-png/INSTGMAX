@@ -785,6 +785,56 @@
   @media(max-width:519px){
     .topbar{backdrop-filter:blur(20px) saturate(1.35)}
   }
+
+  /* ===== Active plan card (Subscribe page) ===== */
+  .active-plan-wrap{width:100%;max-width:400px;margin:18px auto 0;position:relative;padding-top:14px;}
+  .active-plan-badge{
+    position:absolute;top:0;right:18px;z-index:2;
+    background:linear-gradient(90deg, var(--accent), var(--accent2, var(--accent)));
+    color:#12081C;font-size:10px;font-weight:800;letter-spacing:.12em;
+    padding:6px 14px;border-radius:999px;text-transform:uppercase;
+    box-shadow:0 0 18px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .active-plan-card{
+    border-radius:22px;padding:28px 22px 22px;
+    background:color-mix(in srgb, var(--bg) 70%, #000);
+    border:1.5px solid var(--accent);
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+               0 0 40px color-mix(in srgb, var(--accent) 22%, transparent),
+               inset 0 0 40px color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .active-plan-card .ap-kicker{
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:8px;
+  }
+  .active-plan-card .ap-price{
+    font-size:42px;font-weight:800;line-height:1;color:var(--text);
+    letter-spacing:-.03em;
+  }
+  .active-plan-card .ap-price small{
+    font-size:14px;font-weight:600;color:var(--muted);margin-left:6px;
+  }
+  .active-plan-card .ap-remain{
+    margin:10px 0 18px;font-size:13px;color:var(--accent);font-weight:700;
+  }
+  .active-plan-card ul{
+    list-style:none;padding:0;margin:0 0 20px;
+  }
+  .active-plan-card li{
+    display:flex;align-items:center;gap:10px;
+    padding:7px 0;font-size:14px;color:var(--text);
+  }
+  .active-plan-card li::before{
+    content:"✓";color:var(--accent);font-weight:800;font-size:16px;
+  }
+  .ap-active-btn{
+    width:100%;border:0;border-radius:999px;padding:14px 18px;
+    font-size:15px;font-weight:800;cursor:default;color:#12081C;
+    background:linear-gradient(90deg, var(--accent), var(--accent2, var(--accent)));
+    box-shadow:0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  #planBuyArea[hidden], #activePlanWrap[hidden]{display:none !important}
+
 </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -890,6 +940,23 @@
       </div>
       <p class="sub-intro">Choose a plan → Pay via UPI → Submit your UTR. Access activates once approved.</p>
       <div class="sub-page-body">
+        <div class="active-plan-wrap" id="activePlanWrap" hidden>
+          <div class="active-plan-badge">Active plan</div>
+          <div class="active-plan-card">
+            <div class="ap-kicker" id="apName">1 MONTH</div>
+            <div class="ap-price">₹<span id="apPrice">199</span><small id="apPeriod">/ 30 days</small></div>
+            <div class="ap-remain" id="apRemain">Remaining: —</div>
+            <ul>
+              <li>Unlimited photos</li>
+              <li>Unlimited videos</li>
+              <li>Full feed — no 2-post lock</li>
+              <li>Stories unlocked</li>
+              <li>No daily limit</li>
+            </ul>
+            <button type="button" class="ap-active-btn" disabled>✓ Plan Active</button>
+          </div>
+        </div>
+        <div id="planBuyArea">
         <div class="plan-row" id="planRow">
           <button type="button" class="plan-btn" data-plan="m1" data-amount="199" data-label="1 Month">
             <span><div>1 Month Access</div><div class="plan-tag">Full feed · 30 days</div></span>
@@ -969,12 +1036,63 @@
             <p style="margin-top:14px;font-size:13px;color:var(--muted,#aaa);">Go to Unlock section and paste this code.</p>
           </div>
         </div>
+        </div><!-- /planBuyArea -->
       </div>
     </section>
 
     <style>
       @keyframes gmaxSpin { to { transform: rotate(360deg); } }
-    </style>
+    
+  /* ===== Active plan card (Subscribe page) ===== */
+  .active-plan-wrap{width:100%;max-width:400px;margin:18px auto 0;position:relative;padding-top:14px;}
+  .active-plan-badge{
+    position:absolute;top:0;right:18px;z-index:2;
+    background:linear-gradient(90deg, var(--accent), var(--accent2, var(--accent)));
+    color:#12081C;font-size:10px;font-weight:800;letter-spacing:.12em;
+    padding:6px 14px;border-radius:999px;text-transform:uppercase;
+    box-shadow:0 0 18px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .active-plan-card{
+    border-radius:22px;padding:28px 22px 22px;
+    background:color-mix(in srgb, var(--bg) 70%, #000);
+    border:1.5px solid var(--accent);
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+               0 0 40px color-mix(in srgb, var(--accent) 22%, transparent),
+               inset 0 0 40px color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .active-plan-card .ap-kicker{
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:8px;
+  }
+  .active-plan-card .ap-price{
+    font-size:42px;font-weight:800;line-height:1;color:var(--text);
+    letter-spacing:-.03em;
+  }
+  .active-plan-card .ap-price small{
+    font-size:14px;font-weight:600;color:var(--muted);margin-left:6px;
+  }
+  .active-plan-card .ap-remain{
+    margin:10px 0 18px;font-size:13px;color:var(--accent);font-weight:700;
+  }
+  .active-plan-card ul{
+    list-style:none;padding:0;margin:0 0 20px;
+  }
+  .active-plan-card li{
+    display:flex;align-items:center;gap:10px;
+    padding:7px 0;font-size:14px;color:var(--text);
+  }
+  .active-plan-card li::before{
+    content:"✓";color:var(--accent);font-weight:800;font-size:16px;
+  }
+  .ap-active-btn{
+    width:100%;border:0;border-radius:999px;padding:14px 18px;
+    font-size:15px;font-weight:800;cursor:default;color:#12081C;
+    background:linear-gradient(90deg, var(--accent), var(--accent2, var(--accent)));
+    box-shadow:0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  #planBuyArea[hidden], #activePlanWrap[hidden]{display:none !important}
+
+</style>
 
 <section class="screen" id="screenAdmin">
       <div class="admin-wrap">
@@ -1227,6 +1345,7 @@
   function applyUnlockState(){
     const until = getUntil();
     const ok = until > Date.now();
+    try{ updateActivePlanUI(); }catch(e){}
     feed.classList.toggle('locked', !ok);
     const sw = document.getElementById('storiesWrap');
     if(sw) sw.classList.toggle('locked', !ok);
@@ -1241,10 +1360,12 @@
           try{ localStorage.removeItem(KEY);}catch(e){}
           feed.classList.add('locked');
           if(tick) clearInterval(tick);
-          try{ renderPosts(); renderStories(); }catch(e){}
+          try{ renderPosts(); renderStories(); updateActivePlanUI(); }catch(e){}
           return;
         }
         timerVal.textContent = fmt(left);
+        const rem = document.getElementById('apRemain');
+        if(rem) rem.textContent = 'Remaining: ' + fmtRemain(left);
       };
       step();
       tick=setInterval(step,1000);
@@ -2329,6 +2450,63 @@
   document.getElementById('btnOpenSubscribe')?.addEventListener('click', openSubscribePage);
   document.getElementById('btnSubBack')?.addEventListener('click', closeSubscribePage);
 
+  
+  const PLAN_META = {
+    '1 Month': { name:'1 MONTH', price:'199', period:'/ 30 days', days:30 },
+    '2 Months': { name:'2 MONTHS', price:'299', period:'/ 60 days', days:60 },
+    '3 Months': { name:'3 MONTHS', price:'399', period:'/ 90 days', days:90 },
+    m1: { name:'1 MONTH', price:'199', period:'/ 30 days', days:30 },
+    m2: { name:'2 MONTHS', price:'299', period:'/ 60 days', days:60 },
+    m3: { name:'3 MONTHS', price:'399', period:'/ 90 days', days:90 }
+  };
+  const PLAN_STORE = 'gmax_active_plan';
+
+  function saveActivePlan(plan, until){
+    const meta = PLAN_META[plan] || PLAN_META['1 Month'];
+    try{ localStorage.setItem(PLAN_STORE, JSON.stringify({ plan: plan, until: until, ...meta })); }catch(e){}
+  }
+  function readActivePlan(){
+    try{ return JSON.parse(localStorage.getItem(PLAN_STORE)||'null'); }catch(e){ return null; }
+  }
+  function fmtRemain(ms){
+    if(ms < 0) ms = 0;
+    const d = Math.floor(ms / 86400000);
+    const h = Math.floor((ms % 86400000) / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    if(d > 0) return d + ' days ' + h + ' hrs left';
+    if(h > 0) return h + ' hrs ' + m + ' min left';
+    return m + ' min left';
+  }
+  function updateActivePlanUI(){
+    const until = getUntil();
+    const ok = until > Date.now();
+    const wrap = document.getElementById('activePlanWrap');
+    const buy = document.getElementById('planBuyArea');
+    const intro = document.querySelector('.sub-intro');
+    const subBtn = document.getElementById('btnOpenSubscribe');
+    if(ok){
+      if(wrap) wrap.hidden = false;
+      if(buy) buy.hidden = true;
+      if(intro) intro.style.display = 'none';
+      const rec = readActivePlan() || PLAN_META['1 Month'];
+      const n = document.getElementById('apName');
+      const p = document.getElementById('apPrice');
+      const per = document.getElementById('apPeriod');
+      const rem = document.getElementById('apRemain');
+      if(n) n.textContent = rec.name || rec.plan || 'PLAN';
+      if(p) p.textContent = rec.price || '199';
+      if(per) per.textContent = rec.period || '';
+      if(rem) rem.textContent = 'Remaining: ' + fmtRemain(until - Date.now());
+      if(subBtn) subBtn.textContent = 'Plan Active';
+    } else {
+      if(wrap) wrap.hidden = true;
+      if(buy) buy.hidden = false;
+      if(intro) intro.style.display = '';
+      if(subBtn) subBtn.textContent = 'Subscribe';
+      try{ localStorage.removeItem(PLAN_STORE); }catch(e){}
+    }
+  }
+
   function setupUpiPayUI(){
     const upiEl = document.getElementById('payUpiId');
     if(upiEl) upiEl.textContent = UPI_ID;
@@ -2436,7 +2614,7 @@
           if(data.status === 'approved' && data.until){
             clearInterval(timer);
             try { localStorage.removeItem('gmax_pending_pay'); } catch(e){}
-            try { setUntil(data.until); applyUnlockState(); } catch(e){}
+            try { if(data.plan) saveActivePlan(data.plan, data.until); setUntil(data.until); applyUnlockState(); } catch(e){}
             const waitBox = document.getElementById('payWaitingBox');
             if(waitBox){
               waitBox.innerHTML = '<h3 style="margin:0 0 8px">Approved</h3><p class="pay-note">Access active. Feed unlock ho gaya.</p>';
@@ -2482,6 +2660,7 @@
       .then(r=>r.json())
       .then(d=>{
         if(d && d.status === 'approved' && d.until > Date.now()){
+          if(d.plan) saveActivePlan(d.plan, d.until);
           setUntil(d.until);
           applyUnlockState();
         }
