@@ -1,42 +1,57 @@
 /**
- * Permanent shared content — Upstash Redis REST
+ * Profile-scoped content — Upstash Redis REST
+ * GET  /api/content?profileId=gmax|edu
+ * POST /api/content  body includes profileId + pin + posts/stories/brand
  * Env: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, ADMIN_PIN
  */
 const crypto = require('crypto');
 
-const KEY = 'lumina:content:v1';
+const LEGACY_KEY = 'lumina:content:v1';
 
-const DEFAULT = {
-  posts: [],
-  stories: [],
-  about: [
-    {
-      badge: 'Slide 1 · Mentor',
-      title: 'Learn with a clear, calm feed',
-      body: 'Stories + posts for your classroom.',
-      bullets: ['Daily tips', 'Notes & revisions', 'Like & share']
-    },
-    {
-      badge: 'Slide 2 · Access',
-      title: 'Private until you unlock',
-      body: 'Blurred until 12-digit key. Valid 36 hours.',
-      bullets: ['Get Key', 'Copy code', 'Verify']
-    },
-    {
-      badge: 'Slide 3 · Educators',
-      title: 'Built for your classroom',
-      body: 'Deploy on Vercel. Share one link.',
-      bullets: ['Admin on server', 'Shared feed', 'Mobile first']
-    }
-  ],
-  brand: {
-    name: 'GMAX Hub',
-    tag: 'Study feed · gated classroom',
-    logo: '',
-    avatar: ''
-  },
-  updatedAt: null
+function contentKey(profileId) {
+  return 'lumina:content:v1:' + profileId;
+}
+
+function normalizeProfile(id) {
+  const p = String(id || 'gmax').toLowerCase().trim();
+  return p === 'edu' ? 'edu' : 'gmax';
+}
+
+const DEFAULT_BRAND = {
+  gmax: { name: 'GMAX Hub', tag: 'Study feed · gated classroom', logo: '', avatar: '' },
+  edu: { name: 'प्रीति सिंह', tag: 'Study feed · gated classroom', logo: '', avatar: '' }
 };
+
+function makeDefault(profileId) {
+  const brand = DEFAULT_BRAND[profileId] || DEFAULT_BRAND.gmax;
+  return {
+    posts: [],
+    stories: [],
+    about: [
+      {
+        badge: 'Slide 1 · Mentor',
+        title: 'Learn with a clear, calm feed',
+        body: 'Stories + posts for your classroom.',
+        bullets: ['Daily tips', 'Notes & revisions', 'Like & share']
+      },
+      {
+        badge: 'Slide 2 · Access',
+        title: 'Private until you unlock',
+        body: 'Subscribe to unlock this profile feed.',
+        bullets: ['Choose plan', 'Pay UPI', 'Get access']
+      },
+      {
+        badge: 'Slide 3 · Profile',
+        title: brand.name,
+        body: 'Content for this profile only after unlock.',
+        bullets: ['Profile locked', 'Separate plans', 'Your data only']
+      }
+    ],
+    brand: Object.assign({}, brand),
+    profileId: profileId,
+    updatedAt: null
+  };
+}
 
 function send(res, status, data) {
   res.statusCode = status;
@@ -64,7 +79,6 @@ function redisEnv() {
   return { url, token };
 }
 
-/** Upstash may return value as object or 1–2x JSON string */
 function parseRedisResult(result) {
   let v = result;
   for (let i = 0; i < 4; i++) {
@@ -82,12 +96,12 @@ function parseRedisResult(result) {
   return null;
 }
 
-async function redisGet() {
+async function redisGetKey(key) {
   const { url, token } = redisEnv();
   if (!url || !token) {
     return { error: 'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN missing in Vercel env' };
   }
-  const r = await fetch(url + '/get/' + encodeURIComponent(KEY), {
+  const r = await fetch(url + '/get/' + encodeURIComponent(key), {
     headers: { Authorization: 'Bearer ' + token }
   });
   const j = await r.json().catch(() => ({}));
@@ -104,13 +118,12 @@ async function redisGet() {
   return { data: parsed };
 }
 
-async function redisSet(obj) {
+async function redisSetKey(key, obj) {
   const { url, token } = redisEnv();
   if (!url || !token) {
     throw new Error('UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN missing in Vercel env');
   }
-  // Upstash REST: body = JSON value directly (one encode). GET result needs one JSON.parse if string.
-  const r = await fetch(url + '/set/' + encodeURIComponent(KEY), {
+  const r = await fetch(url + '/set/' + encodeURIComponent(key), {
     method: 'POST',
     headers: {
       Authorization: 'Bearer ' + token,
@@ -125,21 +138,23 @@ async function redisSet(obj) {
   return j;
 }
 
-function normalize(c) {
+function normalize(c, profileId) {
   c = c && typeof c === 'object' ? c : {};
+  const def = makeDefault(profileId);
   return {
     posts: Array.isArray(c.posts) ? c.posts : [],
     stories: Array.isArray(c.stories) ? c.stories : [],
-    about: Array.isArray(c.about) && c.about.length ? c.about : DEFAULT.about,
+    about: Array.isArray(c.about) && c.about.length ? c.about : def.about,
     brand:
       c.brand && typeof c.brand === 'object'
         ? {
-            name: String(c.brand.name || DEFAULT.brand.name),
-            tag: String(c.brand.tag || DEFAULT.brand.tag),
+            name: String(c.brand.name || def.brand.name),
+            tag: String(c.brand.tag || def.brand.tag),
             logo: String(c.brand.logo || ''),
             avatar: String(c.brand.avatar || '')
           }
-        : DEFAULT.brand,
+        : def.brand,
+    profileId: profileId,
     updatedAt: c.updatedAt || null
   };
 }
@@ -155,17 +170,37 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
-      const got = await redisGet();
-      if (got.error) {
-        return send(res, 200, { ok: true, content: DEFAULT, source: 'default', warn: got.error });
+      const profileId = normalizeProfile(req.query && req.query.profileId);
+      let got = await redisGetKey(contentKey(profileId));
+
+      // Migrate: old single feed → gmax
+      if ((!got.data || got.error) && profileId === 'gmax') {
+        const legacy = await redisGetKey(LEGACY_KEY);
+        if (legacy.data) got = legacy;
+      }
+
+      if (got.error && !got.data) {
+        return send(res, 200, {
+          ok: true,
+          content: makeDefault(profileId),
+          source: 'default',
+          profileId: profileId,
+          warn: got.error
+        });
       }
       if (!got.data) {
-        return send(res, 200, { ok: true, content: DEFAULT, source: 'empty' });
+        return send(res, 200, {
+          ok: true,
+          content: makeDefault(profileId),
+          source: 'empty',
+          profileId: profileId
+        });
       }
       return send(res, 200, {
         ok: true,
-        content: normalize(got.data),
-        source: 'upstash'
+        content: normalize(got.data, profileId),
+        source: 'upstash',
+        profileId: profileId
       });
     }
 
@@ -178,16 +213,13 @@ module.exports = async function handler(req, res) {
           body = {};
         }
       }
-      // Vercel sometimes leaves body as Buffer / empty — try raw if needed
-      if (!body || (typeof body === 'object' && !body.pin && !body.posts && Object.keys(body).length === 0)) {
-        // keep as is
-      }
       body = body || {};
 
       if (!checkAdmin(body)) {
         return send(res, 401, { ok: false, error: 'Admin PIN required / wrong PIN' });
       }
 
+      const profileId = normalizeProfile(body.profileId);
       const { url, token } = redisEnv();
       if (!url || !token) {
         return send(res, 500, {
@@ -196,33 +228,37 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      const contentObj = normalize({
-        posts: body.posts,
-        stories: body.stories,
-        about: body.about,
-        brand: body.brand
-      });
+      const contentObj = normalize(
+        {
+          posts: body.posts,
+          stories: body.stories,
+          about: body.about,
+          brand: body.brand
+        },
+        profileId
+      );
       contentObj.updatedAt = new Date().toISOString();
 
       try {
-        await redisSet(contentObj);
+        await redisSetKey(contentKey(profileId), contentObj);
+        // Keep legacy key in sync for gmax (old clients)
+        if (profileId === 'gmax') {
+          try {
+            await redisSetKey(LEGACY_KEY, contentObj);
+          } catch (_) {}
+        }
       } catch (e) {
         return send(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
       }
 
-      const confirm = await redisGet();
-      if (confirm.error) {
-        return send(res, 500, { ok: false, error: 'Saved but read-back failed: ' + confirm.error });
-      }
-      const saved = confirm.data ? normalize(confirm.data) : contentObj;
-
       return send(res, 200, {
         ok: true,
-        content: saved,
+        content: contentObj,
         source: 'upstash',
+        profileId: profileId,
         counts: {
-          posts: (saved.posts || []).length,
-          stories: (saved.stories || []).length
+          posts: (contentObj.posts || []).length,
+          stories: (contentObj.stories || []).length
         }
       });
     }
