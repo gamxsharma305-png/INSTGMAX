@@ -1,11 +1,22 @@
 /**
  * POST /api/submit-payment
- * Body: { name, email, mobile, utr, plan, amount, deviceId }
+ * Body: { name, email, mobile, utr, plan, amount, deviceId, profileId }
+ * profileId: "gmax" | "edu" (default gmax)
  */
 const crypto = require('crypto');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8654144417:AAH-RzyTAYavTNRk-cHbVzoxKMX_KKCgOGI';
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID || '8276743517';
+
+const PROFILE_LABELS = {
+  gmax: 'GMAX Hub',
+  edu: 'प्रीति सिंह'
+};
+
+function normalizeProfile(id) {
+  const p = String(id || 'gmax').toLowerCase().trim();
+  return p === 'edu' ? 'edu' : 'gmax';
+}
 
 function redisEnv() {
   const url = String(process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
@@ -30,6 +41,33 @@ async function redisSet(key, value, expSeconds) {
   return r.ok;
 }
 
+async function redisGet(key) {
+  const { url, token } = redisEnv();
+  if (!url || !token) return null;
+  const r = await fetch(url + '/get/' + encodeURIComponent(key), {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.result == null || j.result === '') return null;
+  let v = j.result;
+  for (let i = 0; i < 3; i++) {
+    if (typeof v === 'object' && v !== null) return v;
+    if (typeof v !== 'string') break;
+    try { v = JSON.parse(v); } catch (_) { return null; }
+  }
+  return typeof v === 'object' && v ? v : null;
+}
+
+async function getProfileName(profileId) {
+  try {
+    const meta = await redisGet('gmax:profiles:meta');
+    if (meta && meta[profileId] && meta[profileId].name) {
+      return String(meta[profileId].name);
+    }
+  } catch (_) {}
+  return PROFILE_LABELS[profileId] || profileId;
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -50,6 +88,7 @@ module.exports = async function handler(req, res) {
   const plan = String(body.plan || '').trim();
   const amount = String(body.amount || '').trim();
   const deviceId = String(body.deviceId || '').trim();
+  const profileId = normalizeProfile(body.profileId);
 
   if (!name || !email || !mobile || !/^\d{12}$/.test(utr)) {
     return res.status(400).json({ ok: false, error: 'Invalid form data' });
@@ -57,15 +96,28 @@ module.exports = async function handler(req, res) {
 
   const id = crypto.randomBytes(6).toString('hex');
   const record = {
-    id, name, email, mobile, utr, plan, amount, deviceId,
+    id,
+    name,
+    email,
+    mobile,
+    utr,
+    plan,
+    amount,
+    deviceId,
+    profileId,
     status: 'pending',
     createdAt: new Date().toISOString()
   };
 
-  try { await redisSet('gmax:pay:' + id, record, 14 * 24 * 60 * 60); } catch (_) {}
+  try {
+    await redisSet('gmax:pay:' + id, record, 14 * 24 * 60 * 60);
+  } catch (_) {}
+
+  const profileName = await getProfileName(profileId);
 
   const text =
     'New payment request\n\n' +
+    'Profile: ' + profileName + ' (' + profileId + ')\n' +
     'Name: ' + name + '\n' +
     'Email: ' + email + '\n' +
     'Mobile: ' + mobile + '\n' +
@@ -96,5 +148,5 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  return res.status(200).json({ ok: true, message: 'Submitted', id: id });
+  return res.status(200).json({ ok: true, message: 'Submitted', id: id, profileId: profileId });
 };
