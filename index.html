@@ -1111,7 +1111,28 @@
           </div>
 
           <div class="admin-box" style="margin-top:14px">
-            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🖼️ Profile / Logo (applies everywhere)</label>
+            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">👤 Profiles (2)</label>
+            <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">
+              Edit / publish content for one profile at a time. Links:<br/>
+              <code style="font-size:11px">?profile=gmax</code> · <code style="font-size:11px">?profile=edu</code>
+            </p>
+            <label>Admin editing profile</label>
+            <select id="adminProfileSelect" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25);margin-bottom:10px">
+              <option value="gmax">GMAX Hub (gmax)</option>
+              <option value="edu">प्रीति सिंह (edu)</option>
+            </select>
+            <label>Display name (this profile)</label>
+            <input type="text" id="profileDisplayNameInput" placeholder="Profile display name"/>
+            <button class="btn btn-ghost" type="button" id="btnSaveProfileName" style="width:100%;margin-top:8px">Save profile name</button>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+              <div class="stat"><b id="statSubsProfile">0</b><span>Subs (profile)</span></div>
+              <div class="stat"><b id="statViewsProfile">0</b><span>Views (profile)</span></div>
+            </div>
+            <p id="profileAdminMsg" style="font-size:12px;color:var(--muted);margin:8px 0 0"></p>
+          </div>
+
+          <div class="admin-box" style="margin-top:14px">
+            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🖼️ Profile / Logo (selected profile only)</label>
             <label>Site name</label>
             <input type="text" id="brandNameInput" placeholder="GMAX Hub" value="GMAX Hub"/>
             <label>Tagline</label>
@@ -1309,6 +1330,20 @@
     return (sharedPosts && sharedPosts.length) ? sharedPosts : DEFAULT_POSTS;
   }
 
+  function getProfileId(){
+    try{
+      const u = new URL(location.href);
+      const p = (u.searchParams.get('profile') || localStorage.getItem('gmax_profile') || 'gmax').toLowerCase();
+      return p === 'edu' ? 'edu' : 'gmax';
+    }catch(e){ return 'gmax'; }
+  }
+  window.GMAX_PROFILE = getProfileId();
+  try{ localStorage.setItem('gmax_profile', window.GMAX_PROFILE); }catch(e){}
+
+  function unlockStorageKey(){
+    return 'lumina_unlock_until_' + (window.GMAX_PROFILE || 'gmax');
+  }
+
   function getDeviceId(){
     try{
       let id = localStorage.getItem(DEVICE_KEY);
@@ -1324,8 +1359,8 @@
     }catch(e){ return 'DEVICE1'; }
   }
 
-  function getUntil(){ try{ return parseInt(localStorage.getItem(KEY)||'0',10)||0; }catch(e){ return 0; } }
-  function setUntil(t){ try{ localStorage.setItem(KEY, String(t)); }catch(e){} }
+  function getUntil(){ try{ return parseInt(localStorage.getItem(unlockStorageKey())||localStorage.getItem(KEY)||'0',10)||0; }catch(e){ return 0; } }
+  function setUntil(t){ try{ localStorage.setItem(unlockStorageKey(), String(t)); localStorage.setItem(KEY, String(t)); }catch(e){} }
   function fmt(ms){
     if(ms<0) ms=0;
     const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
@@ -1337,7 +1372,7 @@
   
   function isUnlockedNow(){
     try{
-      const until = parseInt(localStorage.getItem('lumina_unlock_until')||'0',10)||0;
+      const until = parseInt(localStorage.getItem(unlockStorageKey())||localStorage.getItem('lumina_unlock_until')||'0',10)||0;
       return until > Date.now();
     }catch(e){ return false; }
   }
@@ -1763,7 +1798,8 @@
 
   async function loadSharedContent(){
     try{
-      const r = await fetch('/api/content?t=' + Date.now(), { cache:'no-store' });
+      const pid = window.GMAX_PROFILE || 'gmax';
+      const r = await fetch('/api/content?profileId=' + encodeURIComponent(pid) + '&t=' + Date.now(), { cache:'no-store' });
       const d = await r.json();
       if(d && d.ok && d.content){
         contentFromServer = true;
@@ -1782,6 +1818,14 @@
           };
           if(sharedBrand.theme) applyTheme(sharedBrand.theme);
         }
+        try{
+          const bn = document.getElementById('brandNameInput');
+          const bt = document.getElementById('brandTagInput');
+          if(bn) bn.value = sharedBrand.name || '';
+          if(bt) bt.value = sharedBrand.tag || '';
+          const ap = document.getElementById('adminProfileSelect');
+          if(ap) ap.value = pid;
+        }catch(e){}
       }
     }catch(e){ console.warn('content load', e); }
     refreshAll();
@@ -1977,6 +2021,7 @@
       adminDash.style.display='block';
       renderAdminList();
       renderAboutEditor();
+      try{ loadAdminProfilesUI(); }catch(e){}
     } else {
       adminLoginBox.style.display='block';
       adminDash.style.display='none';
@@ -1984,6 +2029,81 @@
   
     try{ loadUnlockStats(); }catch(e){}
   }
+
+  async function loadAdminProfilesUI(){
+    const sel = document.getElementById('adminProfileSelect');
+    const nameIn = document.getElementById('profileDisplayNameInput');
+    const msg = document.getElementById('profileAdminMsg');
+    if(!sel) return;
+    try{
+      const pin = adminPinSession || '';
+      const url = pin
+        ? ('/api/profiles?stats=1&pin=' + encodeURIComponent(pin))
+        : '/api/profiles';
+      const r = await fetch(url, { cache:'no-store' });
+      const d = await r.json();
+      if(!d || !d.ok) return;
+      const list = d.profiles || [];
+      list.forEach(p=>{
+        const opt = sel.querySelector('option[value="'+p.id+'"]');
+        if(opt) opt.textContent = (p.name || p.id) + ' (' + p.id + ')';
+      });
+      if(!sel.value) sel.value = window.GMAX_PROFILE || 'gmax';
+      const cur = list.find(x=>x.id===sel.value) || list[0];
+      if(nameIn && cur) nameIn.value = cur.name || '';
+      if(d.stats && d.stats[sel.value]){
+        const st = d.stats[sel.value];
+        const ss = document.getElementById('statSubsProfile');
+        const sv = document.getElementById('statViewsProfile');
+        if(ss) ss.textContent = String(st.subscriptions||0);
+        if(sv) sv.textContent = String(st.views||0);
+      }
+      if(msg) msg.textContent = 'Editing content for: ' + (cur && cur.name ? cur.name : sel.value);
+    }catch(e){}
+  }
+
+  document.getElementById('adminProfileSelect')?.addEventListener('change', async function(){
+    const pid = this.value === 'edu' ? 'edu' : 'gmax';
+    window.GMAX_PROFILE = pid;
+    try{ localStorage.setItem('gmax_profile', pid); }catch(e){}
+    // Update URL without full reload
+    try{
+      const u = new URL(location.href);
+      u.searchParams.set('profile', pid);
+      history.replaceState({}, '', u.toString());
+    }catch(e){}
+    await loadSharedContent();
+    applyUnlockState();
+    try{ loadAdminProfilesUI(); }catch(e){}
+  });
+
+  document.getElementById('btnSaveProfileName')?.addEventListener('click', async function(){
+    const msg = document.getElementById('profileAdminMsg');
+    const pin = adminPinSession;
+    if(!pin){ if(msg) msg.textContent = 'Login with Admin PIN first'; return; }
+    const profileId = (document.getElementById('adminProfileSelect')&&document.getElementById('adminProfileSelect').value) || 'gmax';
+    const name = (document.getElementById('profileDisplayNameInput')&&document.getElementById('profileDisplayNameInput').value || '').trim();
+    if(!name){ if(msg) msg.textContent = 'Enter a display name'; return; }
+    try{
+      const r = await fetch('/api/profiles', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ pin, profileId, name })
+      });
+      const d = await r.json();
+      if(d && d.ok){
+        if(msg){ msg.style.color='#86efac'; msg.textContent = 'Name saved for ' + profileId; }
+        await loadAdminProfilesUI();
+        // Also update brand name field for this profile
+        const bn = document.getElementById('brandNameInput');
+        if(bn) bn.value = name;
+      } else {
+        if(msg){ msg.style.color='#f87171'; msg.textContent = (d && d.error) || 'Save failed'; }
+      }
+    }catch(e){
+      if(msg) msg.textContent = 'Network error';
+    }
+  });
   document.getElementById('adminLoginBtn').onclick = ()=>{
     adminErr.textContent='';
     const pinVal = adminPin.value||'';
@@ -2098,6 +2218,7 @@
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         pin: adminPinSession,
+        profileId: (document.getElementById('adminProfileSelect')&&document.getElementById('adminProfileSelect').value) || window.GMAX_PROFILE || 'gmax',
         posts: sharedPosts || [],
         stories: sharedStories || [],
         about: sharedAbout,
@@ -2127,10 +2248,11 @@
         err.style.color = '#86efac';
         err.textContent = 'Published OK · posts=' + pc + ' stories=' + sc + ' · refresh your other phone';
         // verify round-trip
-        return fetch('/api/content?t=' + Date.now(), {cache:'no-store'}).then(r2=>r2.json()).then(d2=>{
+        const pid = (document.getElementById('adminProfileSelect')&&document.getElementById('adminProfileSelect').value) || window.GMAX_PROFILE || 'gmax';
+        return fetch('/api/content?profileId=' + encodeURIComponent(pid) + '&t=' + Date.now(), {cache:'no-store'}).then(r2=>r2.json()).then(d2=>{
           if(d2 && d2.content){
             const p2 = (d2.content.posts||[]).length;
-            err.textContent = 'Server confirm · posts=' + p2 + ' stories=' + (d2.content.stories||[]).length;
+            err.textContent = 'Server confirm · posts=' + p2 + ' stories=' + (d2.content.stories||[]).length + ' · profile=' + pid;
             contentFromServer = true;
             sharedPosts = d2.content.posts || [];
             sharedStories = d2.content.stories || [];
@@ -2568,7 +2690,8 @@
             utr: utr,
             plan: planLabel,
             amount: amount,
-            deviceId: (typeof getDeviceId === 'function' ? getDeviceId() : '')
+            deviceId: (typeof getDeviceId === 'function' ? getDeviceId() : ''),
+            profileId: window.GMAX_PROFILE || 'gmax'
           })
         });
         let d = {};
@@ -2656,7 +2779,8 @@
   try{ setupUpiPayUI(); }catch(e){}
   try{
     const did = getDeviceId();
-    fetch('/api/payment-status?deviceId=' + encodeURIComponent(did))
+    const pid = window.GMAX_PROFILE || 'gmax';
+    fetch('/api/payment-status?deviceId=' + encodeURIComponent(did) + '&profileId=' + encodeURIComponent(pid))
       .then(r=>r.json())
       .then(d=>{
         if(d && d.status === 'approved' && d.until > Date.now()){
