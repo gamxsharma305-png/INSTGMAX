@@ -1,11 +1,16 @@
 /**
  * POST /api/telegram-webhook
- * Approve = unlock that user's phone directly (no code sharing).
+ * Approve = unlock device for that profile only
  */
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8654144417:AAH-RzyTAYavTNRk-cHbVzoxKMX_KKCgOGI';
 const SHEET_WEBAPP =
   process.env.SHEET_WEBAPP_URL ||
   'https://script.google.com/macros/s/AKfycbznvyS8EYSRIQUwnE6mvExjAIZEKEJwPauczIRvY32T5AcOn_bJTtvWmkXcldUXgnBZ/exec';
+
+function normalizeProfile(id) {
+  const p = String(id || 'gmax').toLowerCase().trim();
+  return p === 'edu' ? 'edu' : 'gmax';
+}
 
 function redisEnv() {
   const url = String(process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
@@ -42,6 +47,17 @@ async function redisSet(key, value, expSeconds) {
   return r.ok;
 }
 
+async function redisIncr(key) {
+  const { url, token } = redisEnv();
+  if (!url || !token) return;
+  try {
+    await fetch(url + '/incr/' + encodeURIComponent(key), {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+  } catch (_) {}
+}
+
 async function tg(method, payload) {
   const r = await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/' + method, {
     method: 'POST',
@@ -76,7 +92,7 @@ module.exports = async function handler(req, res) {
   const chatId = cq.message && cq.message.chat && cq.message.chat.id;
   const messageId = cq.message && cq.message.message_id;
 
-  let rec = await redisGet('gmax:pay:' + id).catch(() => null) || {};
+  let rec = (await redisGet('gmax:pay:' + id).catch(() => null)) || {};
   const name = rec.name || '';
   const email = rec.email || '';
   const mobile = rec.mobile || '';
@@ -84,18 +100,23 @@ module.exports = async function handler(req, res) {
   const plan = rec.plan || '';
   const amount = rec.amount || '';
   const deviceId = rec.deviceId || '';
+  const profileId = normalizeProfile(rec.profileId);
   const days = planDays(plan);
   const expSec = days * 24 * 60 * 60 + 86400;
 
   if (action === 'D') {
     try {
-      await redisSet('gmax:pay:' + id, Object.assign({}, rec, { status: 'rejected' }), 14 * 24 * 60 * 60);
+      await redisSet(
+        'gmax:pay:' + id,
+        Object.assign({}, rec, { status: 'rejected', profileId }),
+        14 * 24 * 60 * 60
+      );
     } catch (_) {}
     await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rejected' });
     await tg('editMessageText', {
       chat_id: chatId,
       message_id: messageId,
-      text: 'REJECTED\n\nName: ' + name + '\nUTR: ' + utr + '\nPlan: ' + plan
+      text: 'REJECTED\n\nProfile: ' + profileId + '\nName: ' + name + '\nUTR: ' + utr + '\nPlan: ' + plan
     });
     return res.status(200).send('OK');
   }
@@ -104,27 +125,50 @@ module.exports = async function handler(req, res) {
     const until = Date.now() + days * 24 * 60 * 60 * 1000;
 
     try {
-      await redisSet('gmax:pay:' + id, Object.assign({}, rec, {
-        status: 'approved',
-        until: until,
-        approvedAt: new Date().toISOString()
-      }), 14 * 24 * 60 * 60);
+      await redisSet(
+        'gmax:pay:' + id,
+        Object.assign({}, rec, {
+          status: 'approved',
+          until: until,
+          profileId: profileId,
+          approvedAt: new Date().toISOString()
+        }),
+        14 * 24 * 60 * 60
+      );
     } catch (_) {}
 
+    // Profile-scoped access: only unlocks THIS profile on this device
     if (deviceId) {
       try {
-        await redisSet('gmax:access:' + deviceId, {
-          until: until,
-          plan: plan,
-          days: days,
-          email: email
-        }, expSec);
+        await redisSet(
+          'gmax:access:' + profileId + ':' + deviceId,
+          {
+            until: until,
+            plan: plan,
+            days: days,
+            email: email,
+            profileId: profileId
+          },
+          expSec
+        );
       } catch (_) {}
     }
 
     try {
+      await redisIncr('gmax:stats:subs:' + profileId);
+    } catch (_) {}
+
+    try {
       const qs = new URLSearchParams({
-        action: 'approve', name, email, mobile, utr, plan, amount, days: String(days)
+        action: 'approve',
+        name,
+        email,
+        mobile,
+        utr,
+        plan,
+        amount,
+        days: String(days),
+        profile: profileId
       });
       await fetch(SHEET_WEBAPP + '?' + qs.toString(), { redirect: 'follow' });
     } catch (_) {}
@@ -135,7 +179,8 @@ module.exports = async function handler(req, res) {
       chat_id: chatId,
       message_id: messageId,
       text:
-        'APPROVED \u2014 user auto-unlocked\n\n' +
+        'APPROVED — user unlocked\n\n' +
+        'Profile: ' + profileId + '\n' +
         'Name: ' + name + '\nEmail: ' + email + '\nMobile: ' + mobile +
         '\nUTR: ' + utr + '\nPlan: ' + plan + ' (Rs ' + amount + ')' +
         '\nExpiry: ' + expiry
