@@ -1,7 +1,12 @@
 /**
  * GET /api/payment-status?id=xxxx
- * GET /api/payment-status?deviceId=XXXX
+ * GET /api/payment-status?deviceId=XXXX&profileId=gmax|edu
  */
+function normalizeProfile(id) {
+  const p = String(id || 'gmax').toLowerCase().trim();
+  return p === 'edu' ? 'edu' : 'gmax';
+}
+
 function redisEnv() {
   const url = String(process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/$/, '');
   const token = String(process.env.UPSTASH_REDIS_REST_TOKEN || '');
@@ -35,6 +40,7 @@ module.exports = async function handler(req, res) {
   const q = req.query || {};
   const id = String(q.id || '').trim();
   const deviceId = String(q.deviceId || '').trim();
+  const profileId = normalizeProfile(q.profileId);
 
   if (id) {
     const rec = await redisGet('gmax:pay:' + id).catch(() => null);
@@ -43,20 +49,29 @@ module.exports = async function handler(req, res) {
       ok: true,
       status: rec.status || 'pending',
       until: rec.until || 0,
-      plan: rec.plan || null
+      plan: rec.plan || null,
+      profileId: normalizeProfile(rec.profileId)
     });
   }
 
   if (deviceId) {
-    const rec = await redisGet('gmax:access:' + deviceId).catch(() => null);
+    // New profile-scoped key
+    let rec = await redisGet('gmax:access:' + profileId + ':' + deviceId).catch(() => null);
+
+    // Backward compat: old global access only counts for gmax
+    if ((!rec || !rec.until) && profileId === 'gmax') {
+      rec = await redisGet('gmax:access:' + deviceId).catch(() => null);
+    }
+
     if (!rec || !rec.until || rec.until < Date.now()) {
-      return res.status(200).json({ ok: true, status: 'none', until: 0 });
+      return res.status(200).json({ ok: true, status: 'none', until: 0, profileId: profileId });
     }
     return res.status(200).json({
       ok: true,
       status: 'approved',
       until: rec.until,
-      plan: rec.plan || null
+      plan: rec.plan || null,
+      profileId: profileId
     });
   }
 
