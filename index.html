@@ -1343,6 +1343,9 @@
   function unlockStorageKey(){
     return 'lumina_unlock_until_' + (window.GMAX_PROFILE || 'gmax');
   }
+  function planStorageKey(){
+    return 'gmax_active_plan_' + (window.GMAX_PROFILE || 'gmax');
+  }
 
   function getDeviceId(){
     try{
@@ -1359,8 +1362,30 @@
     }catch(e){ return 'DEVICE1'; }
   }
 
-  function getUntil(){ try{ return parseInt(localStorage.getItem(unlockStorageKey())||localStorage.getItem(KEY)||'0',10)||0; }catch(e){ return 0; } }
-  function setUntil(t){ try{ localStorage.setItem(unlockStorageKey(), String(t)); localStorage.setItem(KEY, String(t)); }catch(e){} }
+  // Per-profile only (no shared fallback — that was showing same plan on both profiles)
+  function getUntil(){
+    try{
+      const pid = window.GMAX_PROFILE || 'gmax';
+      let v = parseInt(localStorage.getItem(unlockStorageKey()) || '0', 10) || 0;
+      // one-time migrate: old global unlock → only gmax
+      if(!v && pid === 'gmax'){
+        v = parseInt(localStorage.getItem(KEY) || '0', 10) || 0;
+        if(v > Date.now()){
+          localStorage.setItem(unlockStorageKey(), String(v));
+          try{ localStorage.removeItem(KEY); }catch(e){}
+        }
+      }
+      return v;
+    }catch(e){ return 0; }
+  }
+  function setUntil(t){
+    try{
+      localStorage.setItem(unlockStorageKey(), String(t || 0));
+    }catch(e){}
+  }
+  function clearUntil(){
+    try{ localStorage.removeItem(unlockStorageKey()); }catch(e){}
+  }
   function fmt(ms){
     if(ms<0) ms=0;
     const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
@@ -1372,8 +1397,7 @@
   
   function isUnlockedNow(){
     try{
-      const until = parseInt(localStorage.getItem(unlockStorageKey())||localStorage.getItem('lumina_unlock_until')||'0',10)||0;
-      return until > Date.now();
+      return getUntil() > Date.now();
     }catch(e){ return false; }
   }
 
@@ -1392,7 +1416,7 @@
         if(left<=0){
           timerVal.textContent='00:00:00';
           timerChip.classList.remove('show');
-          try{ localStorage.removeItem(KEY);}catch(e){}
+          try{ clearUntil(); localStorage.removeItem(planStorageKey()); }catch(e){}
           feed.classList.add('locked');
           if(tick) clearInterval(tick);
           try{ renderPosts(); renderStories(); updateActivePlanUI(); }catch(e){}
@@ -2066,13 +2090,27 @@
     const pid = this.value === 'edu' ? 'edu' : 'gmax';
     window.GMAX_PROFILE = pid;
     try{ localStorage.setItem('gmax_profile', pid); }catch(e){}
-    // Update URL without full reload
     try{
       const u = new URL(location.href);
       u.searchParams.set('profile', pid);
       history.replaceState({}, '', u.toString());
     }catch(e){}
     await loadSharedContent();
+    // Re-check THIS profile's access from server (don't reuse other profile's unlock)
+    try{
+      const did = getDeviceId();
+      const r = await fetch('/api/payment-status?deviceId=' + encodeURIComponent(did) + '&profileId=' + encodeURIComponent(pid));
+      const d = await r.json();
+      if(d && d.status === 'approved' && d.until > Date.now()){
+        if(d.plan) saveActivePlan(d.plan, d.until);
+        setUntil(d.until);
+      } else {
+        clearUntil();
+        try{ localStorage.removeItem(planStorageKey()); }catch(e){}
+      }
+    }catch(e){
+      clearUntil();
+    }
     applyUnlockState();
     try{ loadAdminProfilesUI(); }catch(e){}
   });
@@ -2581,14 +2619,29 @@
     m2: { name:'2 MONTHS', price:'299', period:'/ 60 days', days:60 },
     m3: { name:'3 MONTHS', price:'399', period:'/ 90 days', days:90 }
   };
-  const PLAN_STORE = 'gmax_active_plan';
+  const PLAN_STORE = 'gmax_active_plan'; // legacy; use planStorageKey()
 
   function saveActivePlan(plan, until){
-    const meta = PLAN_META[plan] || PLAN_META['1 Month'];
-    try{ localStorage.setItem(PLAN_STORE, JSON.stringify({ plan: plan, until: until, ...meta })); }catch(e){}
+    const meta = PLAN_META[plan] || PLAN_META['1 Month'] || PLAN_META.m1;
+    try{
+      localStorage.setItem(planStorageKey(), JSON.stringify({ plan: plan, until: until, ...meta }));
+    }catch(e){}
   }
   function readActivePlan(){
-    try{ return JSON.parse(localStorage.getItem(PLAN_STORE)||'null'); }catch(e){ return null; }
+    try{
+      const cur = JSON.parse(localStorage.getItem(planStorageKey()) || 'null');
+      if(cur) return cur;
+      // migrate legacy global plan only for gmax
+      if((window.GMAX_PROFILE || 'gmax') === 'gmax'){
+        const old = JSON.parse(localStorage.getItem(PLAN_STORE) || 'null');
+        if(old){
+          localStorage.setItem(planStorageKey(), JSON.stringify(old));
+          try{ localStorage.removeItem(PLAN_STORE); }catch(e){}
+          return old;
+        }
+      }
+      return null;
+    }catch(e){ return null; }
   }
   function fmtRemain(ms){
     if(ms < 0) ms = 0;
@@ -2625,7 +2678,7 @@
       if(buy) buy.hidden = false;
       if(intro) intro.style.display = '';
       if(subBtn) subBtn.textContent = 'Subscribe';
-      try{ localStorage.removeItem(PLAN_STORE); }catch(e){}
+      try{ localStorage.removeItem(planStorageKey()); }catch(e){}
     }
   }
 
