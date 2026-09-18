@@ -2186,37 +2186,6 @@
 
   document.getElementById('btnRefreshDash')?.addEventListener('click', ()=>{ try{ loadAdminProfilesUI(); }catch(e){} });
 
-  document.getElementById('adminProfileSelect');
-    const nameIn = document.getElementById('profileDisplayNameInput');
-    const msg = document.getElementById('profileAdminMsg');
-    if(!sel) return;
-    try{
-      const pin = adminPinSession || '';
-      const url = pin
-        ? ('/api/profiles?stats=1&pin=' + encodeURIComponent(pin))
-        : '/api/profiles';
-      const r = await fetch(url, { cache:'no-store' });
-      const d = await r.json();
-      if(!d || !d.ok) return;
-      const list = d.profiles || [];
-      list.forEach(p=>{
-        const opt = sel.querySelector('option[value="'+p.id+'"]');
-        if(opt) opt.textContent = (p.name || p.id) + ' (' + p.id + ')';
-      });
-      if(!sel.value) sel.value = window.GMAX_PROFILE || 'gmax';
-      const cur = list.find(x=>x.id===sel.value) || list[0];
-      if(nameIn && cur) nameIn.value = cur.name || '';
-      if(d.stats && d.stats[sel.value]){
-        const st = d.stats[sel.value];
-        const ss = document.getElementById('statSubsProfile');
-        const sv = document.getElementById('statViewsProfile');
-        if(ss) ss.textContent = String(st.subscriptions||0);
-        if(sv) sv.textContent = String(st.views||0);
-      }
-      if(msg) msg.textContent = 'Editing content for: ' + (cur && cur.name ? cur.name : sel.value);
-    }catch(e){}
-  }
-
   document.getElementById('adminProfileSelect')?.addEventListener('change', async function(){
     const pid = this.value === 'edu' ? 'edu' : 'gmax';
     window.GMAX_PROFILE = pid;
