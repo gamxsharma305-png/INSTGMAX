@@ -837,6 +837,7 @@
 
 </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -999,14 +1000,8 @@
             <span><b>Welcome back!</b> Your UPI app should have opened. Enter the 12-digit <b>UTR / UPI Ref No.</b> below and press <b>Submit</b> for instant approval.</span>
           </div>
           <h4 id="payPanelTitle">Pay ₹199</h4>
-          <p class="pay-note">Pay via UPI, then enter the UTR (Ref No.) below. Access is granted after approval.</p>
-          <div class="pay-qr" id="payQrBox">
-            <span style="color:#333;font-size:12px;padding:8px;text-align:center">QR code here<br/>(set UPI_QR_URL)</span>
-          </div>
-          <div class="pay-upi-row">
-            <code id="payUpiId">sonu77370725@axl</code>
-            <button type="button" class="btn btn-ghost" id="btnCopyUpi" style="white-space:nowrap">Copy</button>
-          </div>
+          <p class="pay-note">Choose how you want to pay. Both options work for this profile.</p>
+
           <form class="pay-form" id="payForm">
             <input type="hidden" id="payPlan" value="m1"/>
             <input type="hidden" id="payAmount" value="199"/>
@@ -1016,9 +1011,29 @@
             <input id="payEmail" type="email" required maxlength="120" placeholder="you@email.com" autocomplete="email"/>
             <label>Mobile</label>
             <input id="payMobile" type="tel" required maxlength="15" placeholder="10-digit mobile" autocomplete="tel"/>
-            <label>UTR / UPI Ref No. (12 digits)</label>
-            <input id="payUtr" inputmode="numeric" pattern="[0-9]{12}" required maxlength="12" minlength="12" placeholder="12-digit UTR"/>
-            <button class="btn btn-primary" type="submit" id="paySubmitBtn">Submit for approval</button>
+
+            <div style="margin:14px 0 10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(212,160,23,.08)">
+              <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--accent)">Option 1 · Pay online (Razorpay)</div>
+              <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">Card / UPI / Netbanking. Access unlocks automatically after success.</p>
+              <button class="btn btn-primary" type="button" id="btnPayRazorpay" style="width:100%">Pay with Razorpay</button>
+            </div>
+
+            <div style="margin:12px 0;text-align:center;font-size:12px;color:var(--muted)">— or —</div>
+
+            <div style="margin:0 0 10px;padding:12px;border:1px solid var(--line);border-radius:12px">
+              <div style="font-weight:700;font-size:13px;margin-bottom:8px">Option 2 · UPI + UTR (manual)</div>
+              <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">Pay via UPI app / QR, then submit 12-digit UTR. Admin approves on Telegram.</p>
+              <div class="pay-qr" id="payQrBox">
+                <span style="color:#333;font-size:12px;padding:8px;text-align:center">QR code here<br/>(set UPI_QR_URL)</span>
+              </div>
+              <div class="pay-upi-row">
+                <code id="payUpiId">sonu77370725@axl</code>
+                <button type="button" class="btn btn-ghost" id="btnCopyUpi" style="white-space:nowrap">Copy</button>
+              </div>
+              <label>UTR / UPI Ref No. (12 digits)</label>
+              <input id="payUtr" inputmode="numeric" pattern="[0-9]{12}" maxlength="12" minlength="12" placeholder="12-digit UTR"/>
+              <button class="btn btn-ghost" type="submit" id="paySubmitBtn" style="width:100%;margin-top:8px">Submit UTR for approval</button>
+            </div>
           </form>
           <p id="payFormMsg" class="pay-note"></p>
 
@@ -1131,8 +1146,33 @@
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
               <div class="stat"><b id="statSubsProfile">0</b><span>Subs (profile)</span></div>
               <div class="stat"><b id="statViewsProfile">0</b><span>Views (profile)</span></div>
+              <div class="stat"><b id="statRevProfile">₹0</b><span>Revenue (profile)</span></div>
             </div>
             <p id="profileAdminMsg" style="font-size:12px;color:var(--muted);margin:8px 0 0"></p>
+          </div>
+
+          <div class="admin-box" style="margin-top:14px">
+            <label style="font-weight:700;color:var(--accent);margin-bottom:10px">📊 Dashboard charts</label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+              <div class="stat"><b id="dashTotalSubs">0</b><span>Total subs</span></div>
+              <div class="stat"><b id="dashTotalViews">0</b><span>Total views</span></div>
+              <div class="stat"><b id="dashTotalRev">₹0</b><span>Total revenue</span></div>
+            </div>
+            <div id="dashCharts" style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Subscriptions</div>
+                <div id="chartSubs" style="display:flex;align-items:flex-end;gap:16px;height:110px;padding:8px 4px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.2)"></div>
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Views</div>
+                <div id="chartViews" style="display:flex;align-items:flex-end;gap:16px;height:110px;padding:8px 4px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.2)"></div>
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Revenue (₹)</div>
+                <div id="chartRevenue" style="display:flex;align-items:flex-end;gap:16px;height:110px;padding:8px 4px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.2)"></div>
+              </div>
+            </div>
+            <button class="btn btn-ghost" type="button" id="btnRefreshDash" style="width:100%;margin-top:12px">Refresh dashboard</button>
           </div>
 
           <div class="admin-box" style="margin-top:14px">
@@ -1349,6 +1389,17 @@
   }
   window.GMAX_PROFILE = getProfileId();
   try{ localStorage.setItem('gmax_profile', window.GMAX_PROFILE); }catch(e){}
+  try{
+    const vk = 'gmax_view_tracked_' + window.GMAX_PROFILE + '_' + new Date().toISOString().slice(0,10);
+    if(!sessionStorage.getItem(vk)){
+      sessionStorage.setItem(vk, '1');
+      fetch('/api/profiles', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'view', profileId: window.GMAX_PROFILE })
+      }).catch(()=>{});
+    }
+  }catch(e){}
 
   function unlockStorageKey(){
     return 'lumina_unlock_until_' + (window.GMAX_PROFILE || 'gmax');
@@ -2089,6 +2140,76 @@
         const st = d.stats[sel.value];
         const ss = document.getElementById('statSubsProfile');
         const sv = document.getElementById('statViewsProfile');
+        const sr = document.getElementById('statRevProfile');
+        if(ss) ss.textContent = String(st.subscriptions||0);
+        if(sv) sv.textContent = String(st.views||0);
+        if(sr) sr.textContent = '₹' + String(st.revenue||0);
+      }
+      if(msg) msg.textContent = 'Editing content for: ' + (cur && cur.name ? cur.name : sel.value);
+      if(d.stats) renderDashboardCharts(d);
+    }catch(e){}
+  }
+
+  function renderDashboardCharts(d){
+    const stats = d.stats || {};
+    const totals = d.totals || {};
+    const ts = document.getElementById('dashTotalSubs');
+    const tv = document.getElementById('dashTotalViews');
+    const tr = document.getElementById('dashTotalRev');
+    if(ts) ts.textContent = String(totals.subscriptions||0);
+    if(tv) tv.textContent = String(totals.views||0);
+    if(tr) tr.textContent = '₹' + String(totals.revenue||0);
+
+    function bar(containerId, key, prefix){
+      const el = document.getElementById(containerId);
+      if(!el) return;
+      const ids = ['gmax','edu'];
+      const vals = ids.map(id => Number((stats[id]&&stats[id][key])||0));
+      const max = Math.max(1, ...vals);
+      el.innerHTML = ids.map((id,i)=>{
+        const v = vals[i];
+        const h = Math.max(8, Math.round((v/max)*90));
+        const label = (stats[id]&&stats[id].name) || id;
+        const short = label.length > 10 ? label.slice(0,9)+'…' : label;
+        const show = prefix ? (prefix+v) : String(v);
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0">'
+          + '<div style="font-size:11px;color:var(--text)">'+show+'</div>'
+          + '<div style="width:70%;max-width:48px;height:'+h+'px;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,var(--accent,#d4a017),rgba(212,160,23,.35))"></div>'
+          + '<div style="font-size:10px;color:var(--muted);text-align:center;line-height:1.2">'+short+'</div>'
+          + '</div>';
+      }).join('');
+    }
+    bar('chartSubs', 'subscriptions', '');
+    bar('chartViews', 'views', '');
+    bar('chartRevenue', 'revenue', '₹');
+  }
+
+  document.getElementById('btnRefreshDash')?.addEventListener('click', ()=>{ try{ loadAdminProfilesUI(); }catch(e){} });
+
+  document.getElementById('adminProfileSelect');
+    const nameIn = document.getElementById('profileDisplayNameInput');
+    const msg = document.getElementById('profileAdminMsg');
+    if(!sel) return;
+    try{
+      const pin = adminPinSession || '';
+      const url = pin
+        ? ('/api/profiles?stats=1&pin=' + encodeURIComponent(pin))
+        : '/api/profiles';
+      const r = await fetch(url, { cache:'no-store' });
+      const d = await r.json();
+      if(!d || !d.ok) return;
+      const list = d.profiles || [];
+      list.forEach(p=>{
+        const opt = sel.querySelector('option[value="'+p.id+'"]');
+        if(opt) opt.textContent = (p.name || p.id) + ' (' + p.id + ')';
+      });
+      if(!sel.value) sel.value = window.GMAX_PROFILE || 'gmax';
+      const cur = list.find(x=>x.id===sel.value) || list[0];
+      if(nameIn && cur) nameIn.value = cur.name || '';
+      if(d.stats && d.stats[sel.value]){
+        const st = d.stats[sel.value];
+        const ss = document.getElementById('statSubsProfile');
+        const sv = document.getElementById('statViewsProfile');
         if(ss) ss.textContent = String(st.subscriptions||0);
         if(sv) sv.textContent = String(st.views||0);
       }
@@ -2725,6 +2846,110 @@
         panel && panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
       });
     });
+    
+    document.getElementById('btnPayRazorpay')?.addEventListener('click', async ()=>{
+      const msg = document.getElementById('payFormMsg');
+      const btn = document.getElementById('btnPayRazorpay');
+      const name = (document.getElementById('payName')?.value||'').trim();
+      const email = (document.getElementById('payEmail')?.value||'').trim();
+      const mobile = (document.getElementById('payMobile')?.value||'').trim();
+      const plan = document.getElementById('payPlan')?.value||'m1';
+      const amount = document.getElementById('payAmount')?.value||'199';
+      const planLabel = (PLAN_MAP[plan]&&PLAN_MAP[plan].label)||plan;
+      if(!name || !email || !mobile){
+        if(msg) msg.textContent = 'Name, email and mobile required';
+        return;
+      }
+      if(typeof Razorpay === 'undefined'){
+        if(msg) msg.textContent = 'Razorpay script not loaded. Refresh page.';
+        return;
+      }
+      if(msg) msg.textContent = 'Creating order…';
+      if(btn) btn.disabled = true;
+      try{
+        const res = await fetch('/api/create-order', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            name, email, mobile,
+            plan: planLabel,
+            amount: amount,
+            deviceId: (typeof getDeviceId === 'function' ? getDeviceId() : ''),
+            profileId: window.GMAX_PROFILE || 'gmax'
+          })
+        });
+        const d = await res.json().catch(()=>({ok:false}));
+        if(!d.ok){
+          if(msg) msg.textContent = d.error || 'Order failed';
+          if(btn) btn.disabled = false;
+          return;
+        }
+        if(msg) msg.textContent = '';
+        const options = {
+          key: d.keyId,
+          amount: d.amount,
+          currency: d.currency || 'INR',
+          name: 'GMAX Hub',
+          description: planLabel + ' · ' + (window.GMAX_PROFILE || 'gmax'),
+          order_id: d.orderId,
+          prefill: { name: name, email: email, contact: mobile },
+          theme: { color: '#d4a017' },
+          handler: async function (response){
+            try{
+              if(msg) msg.textContent = 'Verifying payment…';
+              const vr = await fetch('/api/verify-payment', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  localId: d.localId
+                })
+              });
+              const vd = await vr.json().catch(()=>({ok:false}));
+              if(vd.ok && vd.until){
+                try{
+                  if(vd.plan) saveActivePlan(vd.plan, vd.until);
+                  setUntil(vd.until);
+                  applyUnlockState();
+                }catch(e){}
+                const formEl = document.getElementById('payForm');
+                if(formEl) formEl.style.display = 'none';
+                const waitBox = document.getElementById('payWaitingBox');
+                if(waitBox){
+                  waitBox.style.display = 'block';
+                  waitBox.innerHTML = '<h3 style="margin:0 0 8px">Payment successful</h3><p class="pay-note">Access active for this profile.</p>';
+                }
+                if(msg) msg.textContent = '';
+                setTimeout(()=>{ try{ closeSubscribePage(); }catch(e){} }, 900);
+              } else {
+                if(msg) msg.textContent = (vd && vd.error) || 'Verify failed';
+              }
+            }catch(e){
+              if(msg) msg.textContent = 'Verify network error';
+            }
+            if(btn) btn.disabled = false;
+          },
+          modal: {
+            ondismiss: function(){
+              if(btn) btn.disabled = false;
+              if(msg) msg.textContent = 'Payment cancelled';
+            }
+          }
+        };
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function(){
+          if(msg) msg.textContent = 'Payment failed. Try again or use UPI + UTR.';
+          if(btn) btn.disabled = false;
+        });
+        rzp.open();
+      }catch(e){
+        if(msg) msg.textContent = 'Network error';
+        if(btn) btn.disabled = false;
+      }
+    });
+
     document.getElementById('payForm')?.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
       const msg = document.getElementById('payFormMsg');
