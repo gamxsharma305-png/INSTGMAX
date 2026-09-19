@@ -18,13 +18,23 @@ function normalizeProfile(id) {
 
 function planDaysFromAmount(amountRupees) {
   const a = parseInt(String(amountRupees).replace(/[^0-9]/g, ''), 10) || 0;
+  if (a === 1) return 0;
   if (a >= 399) return 90;
   if (a >= 299) return 60;
   return 30;
 }
 
+function durationSecFromAmount(amountRupees) {
+  const a = parseInt(String(amountRupees).replace(/[^0-9]/g, ''), 10) || 0;
+  if (a === 1) return 20 * 60;
+  if (a >= 399) return 90 * 24 * 60 * 60;
+  if (a >= 299) return 60 * 24 * 60 * 60;
+  return 30 * 24 * 60 * 60;
+}
+
 function planLabelFromAmount(amountRupees) {
   const a = parseInt(String(amountRupees).replace(/[^0-9]/g, ''), 10) || 0;
+  if (a === 1) return 'Test 20 min';
   if (a >= 399) return '3 Months';
   if (a >= 299) return '2 Months';
   return '1 Month';
@@ -168,7 +178,7 @@ module.exports = async function handler(req, res) {
   }
 
   const amountRupees = Math.round(amountPaise / 100);
-  if (![199, 299, 399].includes(amountRupees)) {
+  if (![1, 199, 299, 399].includes(amountRupees)) {
     return res.status(200).json({ ok: true, ignored: 'amount', amountRupees });
   }
 
@@ -195,9 +205,13 @@ module.exports = async function handler(req, res) {
   const deviceId = String(pending.deviceId || '');
   const profileId = normalizeProfile(pending.profileId);
   const plan = pending.plan || planLabelFromAmount(amountRupees);
-  const days = pending.days || planDaysFromAmount(amountRupees);
-  const until = Date.now() + days * 24 * 60 * 60 * 1000;
-  const expSec = days * 24 * 60 * 60 + 86400;
+  const days = pending.days != null ? pending.days : planDaysFromAmount(amountRupees);
+  const durationSec =
+    pending.durationSec ||
+    durationSecFromAmount(amountRupees) ||
+    (days > 0 ? days * 24 * 60 * 60 : 20 * 60);
+  const until = Date.now() + durationSec * 1000;
+  const expSec = durationSec + 86400;
 
   try {
     await redisSet(
