@@ -67,9 +67,13 @@ module.exports = async function handler(req, res) {
   const deviceId = String(body.deviceId || '').trim();
   const profileId = normalizeProfile(body.profileId);
 
-  if (!name || !email || !mobile || amount < 1) {
-    return res.status(400).json({ ok: false, error: 'Invalid form data' });
+  if (amount < 1) {
+    return res.status(400).json({ ok: false, error: 'Invalid amount' });
   }
+  if (!name) name = 'Customer';
+  if (!email) email = 'user@gmax.app';
+  if (!mobile) mobile = '9999999999';
+
   if (!KEY_ID || !KEY_SECRET) {
     return res.status(500).json({ ok: false, error: 'Razorpay keys not configured' });
   }
