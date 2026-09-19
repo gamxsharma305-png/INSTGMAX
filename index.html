@@ -76,12 +76,15 @@
   button,input{font:inherit;color:inherit}
   a{color:inherit;text-decoration:none}
   img{display:block;max-width:100%}
+
   .app{
     max-width:480px;margin:0 auto;height:100%;
     display:flex;flex-direction:column;
     background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb, var(--accent) 28%, var(--bg)) 0%,var(--bg) 55%);
     position:relative;overflow:hidden;
   }
+
+  /* Top bar */
   .topbar{
     display:flex;align-items:center;justify-content:space-between;
     padding:12px 14px 8px;border-bottom:1px solid var(--line);
@@ -98,6 +101,7 @@
   .logo img{width:100%;height:100%;object-fit:cover;border-radius:12px}
   .post-av{overflow:hidden}
   .post-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+  /* Stories locked until unlock */
   .stories-wrap{position:relative}
   .feed.locked .stories{
     filter:blur(14px);user-select:none;pointer-events:none
@@ -119,10 +123,14 @@
   }
   .icon-btn:active{transform:scale(.94)}
   .icon-btn svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:1.8}
+
+  /* Screens */
   .screens{flex:1;overflow:hidden;position:relative}
   .screen{position:absolute;inset:0;overflow-y:auto;padding-bottom:88px;
     opacity:0;pointer-events:none;transform:translateY(8px);transition:.25s ease}
   .screen.active{opacity:1;pointer-events:auto;transform:none}
+
+  /* Stories */
   .stories{
     display:flex;gap:12px;padding:14px 14px 6px;overflow-x:auto;
     scrollbar-width:none;
@@ -146,6 +154,8 @@
   }
   .story span{font-size:11px;color:var(--muted);display:block;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis;max-width:72px;margin:0 auto}
+
+  /* Feed */
   .feed{padding:8px 0 20px}
   .post{
     margin:0 0 18px;border-bottom:1px solid var(--line);padding-bottom:14px
@@ -165,6 +175,8 @@
   .post-media{
     aspect-ratio:4/5;max-height:520px;background:#0c0614;position:relative;overflow:hidden
   }
+
+  /* ===== Reel play/unmute overlay ===== */
   .reel{position:relative}
   .reel video{
     width:100%;height:100%;
@@ -196,8 +208,11 @@
   @media(hover:hover){
     .reel-toggle:hover{transform:scale(1.06);border-color:var(--accent)}
   }
+  /* Pause hint when no video is active */
   .reel.is-paused video{opacity:.95}
+  /* Keep media-controls off (we use ours) */
   .reel video::-webkit-media-controls{display:none !important}
+
   .post-media img,.post-media video{
     width:100%;height:100%;object-fit:cover
   }
@@ -213,6 +228,8 @@
   .caption{padding:4px 14px 0;font-size:13.5px;line-height:1.45}
   .caption strong{margin-right:6px}
   .time{padding:4px 14px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+  /* Blur gate overlay on feed content */
   .feed.locked .post-media,
   .feed.locked .caption,
   .feed.locked .likes,
@@ -234,6 +251,8 @@
   }
   .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a0a2a}
   .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+
+  /* Unlock modal */
   .modal{
     position:fixed;inset:0;z-index:50;display:none;align-items:flex-end;justify-content:center;
     background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:16px
@@ -260,6 +279,8 @@
     background:rgba(196,161,255,.12);border:1px solid var(--line);padding:4px 10px;border-radius:999px
   }
   .timer-chip.show{display:inline-flex}
+
+  /* About — 3 slides */
   .about-deck{
     height:100%;scroll-snap-type:y mandatory;overflow-y:auto
   }
@@ -281,10 +302,13 @@
   .about-card li{display:flex;gap:10px;align-items:flex-start}
   .about-card li::before{content:"";width:8px;height:8px;margin-top:6px;border-radius:50%;
     background:linear-gradient(135deg,var(--accent),var(--pink));flex-shrink:0}
+
   .about-slide .about-img{
     width:100%;max-height:220px;object-fit:cover;border-radius:14px;
     border:1px solid var(--line);margin:4px 0 8px;
   }
+
+  /* Admin */
   .admin-wrap{padding:18px 14px 100px}
   .admin-wrap h2{font-size:20px;margin-bottom:8px}
   .admin-wrap .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
@@ -304,6 +328,9 @@
   }
   .stat b{display:block;font-size:20px}
   .stat span{font-size:11px;color:var(--muted)}
+
+  /* Bottom navigation */
+  /* ===== ARC-style animated tab bar ===== */
   .tabbar{
     position:absolute;left:12px;right:12px;bottom:calc(10px + var(--safe-b));
     z-index:10;
@@ -347,6 +374,8 @@
     filter:drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 70%, transparent));
     transform:translateY(-1px);
   }
+
+  /* Story viewer fullscreen */
   .viewer{
     position:fixed;inset:0;z-index:60;background:#000;display:none;flex-direction:column
   }
@@ -371,6 +400,9 @@
     position:absolute;top:48px;right:12px;border:0;background:rgba(0,0,0,.4);
     color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px
   }
+
+  
+  /* Block long-press save / callout on media */
   .no-save, .post-media, .post-media img, .post-media video,
   .viewer-body, .viewer-body img, .story-media {
     -webkit-user-select:none; user-select:none;
@@ -383,11 +415,13 @@
   .media-protect::after {
     content:""; position:absolute; inset:0; z-index:2;
   }
+
   @media(min-width:520px){
     body{display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
     .app{height:min(900px,100vh);border-radius:24px;border:1px solid var(--line);
       box-shadow:0 30px 80px rgba(0,0,0,.5)}
   }
+
   .unlock-wall{
     margin:8px 14px 40px;padding:28px 18px;border-radius:var(--radius);
     background:var(--panel);border:1px solid var(--line);backdrop-filter:var(--glass);
@@ -395,8 +429,11 @@
   }
   .unlock-wall h3{font-size:17px;margin-bottom:8px;color:var(--accent)}
   .unlock-wall p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
-  .feed.locked{
+  .feed.locked{ /* preview only 2 posts */
   }
+
+
+  /* ===== Profile / learning header ===== */
   .profile-wrap{
     padding:0 0 6px;
     background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, var(--bg)) 0%, var(--bg) 70%);position:relative;isolation:isolate;}
@@ -479,7 +516,11 @@
   .profile-section-tabs button.active{color:var(--accent)}
   .profile-section-tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6}
   #monthPayMsg{font-size:12px;margin:8px 14px 0;text-align:center;min-height:16px;color:var(--muted);line-height:1.4}
+  /* hide bulky top brand on home - keep timer row thin */
   .topbar{padding:6px 12px}
+
+
+  /* stack fix: cover always behind avatar */
   .profile-wrap{ position:relative; isolation:isolate; overflow:visible; }
   .profile-cover{
     position:absolute !important; left:0; right:0; top:0;
@@ -490,6 +531,9 @@
   .profile-top-row{ position:relative; z-index:5 !important; padding-top:12px; }
   .profile-main{ position:relative; z-index:5 !important; margin-top:56px !important; }
   .profile-avatar-ring{ position:relative; z-index:6 !important; }
+
+
+  /* ===== Subscription plans + UPI pay (theme vars only) ===== */
   .plan-row{
     display:flex;flex-direction:column;gap:8px;
     width:min(340px,100%);margin-top:12px;
@@ -547,6 +591,8 @@
   }
   .pay-form .btn{margin-top:12px;width:100%}
   .pay-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4}
+
+  /* Success checkmark modal */
   .success-modal{
     position:fixed;inset:0;z-index:200;
     background:rgba(0,0,0,.65);backdrop-filter:blur(8px);
@@ -571,6 +617,9 @@
   }
   .success-sheet h3{margin:0 0 8px;font-size:18px}
   .success-sheet p{margin:0;font-size:13px;color:var(--muted);line-height:1.5}
+
+
+  /* Subscribe page */
   .sub-page-top{
     display:flex;align-items:center;gap:10px;
     padding:12px 14px 6px;position:sticky;top:0;z-index:5;
@@ -587,6 +636,9 @@
   .sub-page-body .plan-row{width:100%;max-width:400px;margin:12px auto 0}
   .sub-page-body .pay-panel{width:100%;max-width:400px;margin:14px auto 0}
   .sub-intro{text-align:center;color:var(--muted);font-size:13px;line-height:1.45;margin:8px 12px 0}
+
+
+  /* ================= Pro Level UI Polish ================= */
   :root{
     --shadow-lg:0 24px 60px rgba(0,0,0,.45);
     --ease-spring:cubic-bezier(.22,1.15,.36,1);
@@ -596,6 +648,7 @@
   .screens > .screen{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 35%,transparent) transparent}
   .screens > .screen::-webkit-scrollbar{width:4px}
   .screens > .screen::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--accent) 35%,transparent);border-radius:99px}
+
   button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
     outline:2px solid var(--accent);outline-offset:2px;border-radius:10px;
   }
@@ -614,6 +667,7 @@
     transition:transform .2s var(--ease-spring);
   }
   .logo:hover{transform:scale(1.06)}
+
   .btn{transition:transform .18s var(--ease-spring),box-shadow .25s ease,filter .25s ease,border-color .25s ease}
   .btn-primary{position:relative;overflow:hidden;box-shadow:0 10px 26px color-mix(in srgb,var(--accent) 34%,transparent)}
   .btn-primary::after{
@@ -635,10 +689,12 @@
   .post:nth-child(3){animation-delay:.13s}
   .post:nth-child(4){animation-delay:.18s}
   .post:nth-child(5){animation-delay:.23s}
+
   .sheet{animation:sheetUp .38s var(--ease-spring)}
   @keyframes sheetUp{from{transform:translateY(44px);opacity:0}to{transform:none;opacity:1}}
   .profile-avatar-ring{animation:pop .5s var(--ease-spring)}
   @keyframes pop{from{transform:scale(.85);opacity:.4}to{transform:scale(1);opacity:1}}
+
   .tab{font-weight:650;letter-spacing:.02em}
   .timer-chip{box-shadow:0 0 14px color-mix(in srgb,var(--accent) 25%,transparent)}
   .admin-box input:focus,.admin-box textarea:focus,.pay-form input:focus,.sheet input:focus{
@@ -656,6 +712,8 @@
   }
   .sub-page-body{scrollbar-width:thin}
   .plan-btn{border-radius:16px}
+
+  /* ===== Pay Now under each plan (UPI deep link) ===== */
   .plan-pay{
     display:flex;align-items:center;gap:12px;
     width:100%;
@@ -699,6 +757,8 @@
     transition:transform .2s var(--ease-spring);
   }
   @media(hover:hover){.plan-pay:hover .plan-pay-go{transform:translateX(4px)}}
+
+  /* "Payment started" / "Awaiting payment" state */
   .plan-pay.is-pending{
     filter:grayscale(.2) brightness(.92);
     pointer-events:none;cursor:default;
@@ -711,6 +771,8 @@
     animation:spin 1.1s linear infinite;display:inline-block;
   }
   @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* auto-reveal pay-panel notice */
   .pay-panel .pay-return-hint{
     margin:-6px 0 12px;padding:10px 12px;
     border-radius:12px;
@@ -723,6 +785,8 @@
   @media(max-width:519px){
     .topbar{backdrop-filter:blur(20px) saturate(1.35)}
   }
+
+  /* ===== Active plan card (Subscribe page) ===== */
   .active-plan-wrap{width:100%;max-width:400px;margin:18px auto 0;position:relative;padding-top:14px;}
   .active-plan-badge{
     position:absolute;top:0;right:18px;z-index:2;
@@ -770,9 +834,12 @@
     box-shadow:0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);
   }
   #planBuyArea[hidden], #activePlanWrap[hidden]{display:none !important}
+
   .buy-plan-card{margin-top:22px;}
   .ap-active-btn.js-pay-now{cursor:pointer;}
   .ap-active-btn.js-pay-now:active{transform:scale(.98);}
+
+
 </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -794,8 +861,11 @@
       </button>
     </div>
   </header>
+
   <div class="screens">
+    <!-- HOME / FEED -->
     <section class="screen active" id="screenHome">
+      <!-- PROFILE / learning brand -->
       <div class="profile-wrap" id="profileWrap">
         <div class="profile-cover" id="profileCover"></div>
         <div class="profile-top-row">
@@ -841,16 +911,21 @@
           </button>
         </div>
       </div>
+
+      <!-- STORIES under profile -->
       <div class="stories-wrap locked" id="storiesWrap">
         <div class="stories" id="storiesRow"></div>
         <div class="stories-lock">🔒 Daily study tips unlock with membership<br/><button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock Access</button></div>
       </div>
+
+      <!-- FEED -->
       <div class="feed locked" id="feed">
         <div class="lock-banner">
           <h3>🔒 Full lessons are locked</h3><p>Only a short preview is visible. Buy a <b>learning membership</b> to unlock complete notes, videos and practice material.</p><button class="btn btn-primary" type="button" id="btnOpenUnlock">View membership plans</button>
         </div>
         <div id="posts"></div>
       </div>
+
         <div class="policy-footer" style="text-align:center;padding:20px 12px 24px;font-size:12px;color:#888;">
           <a href="/terms.html" style="color:#aaa;margin:0 8px;text-decoration:none;">Terms</a>
           <a href="/privacy.html" style="color:#aaa;margin:0 8px;text-decoration:none;">Privacy</a>
@@ -859,9 +934,14 @@
           <a href="/contact.html" style="color:#aaa;margin:0 8px;text-decoration:none;">Contact</a>
         </div>
     </section>
+
+    <!-- ABOUT 3 slides -->
     <section class="screen" id="screenAbout">
       <div class="about-deck" id="aboutDeck"></div>
     </section>
+
+    <!-- ADMIN -->
+    
     <section class="screen" id="screenSubscribe">
       <div class="sub-page-top">
         <button type="button" class="sub-back" id="btnSubBack">← Back</button>
@@ -887,6 +967,7 @@
         </div>
         <div id="planBuyArea">
         <div class="plan-row" id="planRow">
+
           <div class="active-plan-wrap buy-plan-card" data-plan="m1" data-amount="199" data-label="1 Month">
             <div class="active-plan-badge">1 Month</div>
             <div class="active-plan-card">
@@ -903,6 +984,7 @@
               <button type="button" class="ap-active-btn js-pay-now" data-plan="m1" data-amount="199" data-label="1 Month">Pay Now · ₹199</button>
             </div>
           </div>
+
           <div class="active-plan-wrap buy-plan-card" data-plan="m2" data-amount="299" data-label="2 Months">
             <div class="active-plan-badge">2 Months</div>
             <div class="active-plan-card">
@@ -919,6 +1001,7 @@
               <button type="button" class="ap-active-btn js-pay-now" data-plan="m2" data-amount="299" data-label="2 Months">Pay Now · ₹299</button>
             </div>
           </div>
+
           <div class="active-plan-wrap buy-plan-card" data-plan="m3" data-amount="399" data-label="3 Months">
             <div class="active-plan-badge">3 Months</div>
             <div class="active-plan-card">
@@ -935,7 +1018,9 @@
               <button type="button" class="ap-active-btn js-pay-now" data-plan="m3" data-amount="399" data-label="3 Months">Pay Now · ₹399</button>
             </div>
           </div>
+
         </div>
+
         <div class="pay-panel" id="payPanel" hidden data-manual-backup="1">
           <div class="pay-return-hint" id="payReturnHint" hidden>
             <span style="font-size:18px;line-height:1">✅</span>
@@ -943,6 +1028,7 @@
           </div>
           <h4 id="payPanelTitle">Pay ₹199</h4>
           <p class="pay-note">Choose how you want to pay. Both options work for this profile.</p>
+
           <form class="pay-form" id="payForm">
             <input type="hidden" id="payPlan" value="m1"/>
             <input type="hidden" id="payAmount" value="199"/>
@@ -952,12 +1038,15 @@
             <input id="payEmail" type="email" required maxlength="120" placeholder="you@email.com" autocomplete="email"/>
             <label>Mobile</label>
             <input id="payMobile" type="tel" required maxlength="15" placeholder="10-digit mobile" autocomplete="tel"/>
+
             <div style="margin:14px 0 10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(212,160,23,.08)">
               <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--accent)">Option 1 · Pay online (Razorpay)</div>
               <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">Card / UPI / Netbanking. Access unlocks automatically after success.</p>
               <button class="btn btn-primary" type="button" id="btnPayRazorpay" style="width:100%">Pay with Razorpay</button>
             </div>
+
             <div style="margin:12px 0;text-align:center;font-size:12px;color:var(--muted)">— or —</div>
+
             <div style="margin:0 0 10px;padding:12px;border:1px solid var(--line);border-radius:12px">
               <div style="font-weight:700;font-size:13px;margin-bottom:8px">Option 2 · UPI + UTR (manual)</div>
               <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">Pay via UPI app / QR, then submit 12-digit UTR. Admin approves on Telegram.</p>
@@ -974,11 +1063,15 @@
             </div>
           </form>
           <p id="payFormMsg" class="pay-note"></p>
+
+          <!-- Waiting only inside payment panel -->
           <div id="payWaitingBox" style="display:none; text-align:center; padding:36px 16px;">
             <div style="width:52px;height:52px;border:4px solid rgba(255,255,255,0.12);border-top-color:var(--accent,#d4a017);border-radius:50%;margin:0 auto 18px;animation:gmaxSpin 0.85s linear infinite;"></div>
             <h3 style="margin:0 0 8px;font-size:18px;">Payment Under Process</h3>
             <p style="color:var(--muted,#aaa);font-size:14px;margin:0;line-height:1.5;">Please wait while we verify your payment.<br>You can go back to Home anytime.</p>
           </div>
+
+          <!-- Unlock code only inside payment panel -->
           <div id="payCodeBox" style="display:none; text-align:center; padding:28px 16px;">
             <h3 style="margin:0 0 6px;color:#22c55e;font-size:18px;">Payment Approved!</h3>
             <p style="color:var(--muted,#aaa);font-size:13px;margin:0 0 16px;">Your Unlock Code is ready. Copy and use it.</p>
@@ -989,11 +1082,14 @@
             <p style="margin-top:14px;font-size:13px;color:var(--muted,#aaa);">Go to Unlock section and paste this code.</p>
           </div>
         </div>
-        </div>
+        </div><!-- /planBuyArea -->
       </div>
     </section>
+
     <style>
       @keyframes gmaxSpin { to { transform: rotate(360deg); } }
+    
+  /* ===== Active plan card (Subscribe page) ===== */
   .active-plan-wrap{width:100%;max-width:400px;margin:18px auto 0;position:relative;padding-top:14px;}
   .active-plan-badge{
     position:absolute;top:0;right:18px;z-index:2;
@@ -1041,7 +1137,9 @@
     box-shadow:0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent);
   }
   #planBuyArea[hidden], #activePlanWrap[hidden]{display:none !important}
+
 </style>
+
 <section class="screen" id="screenAdmin">
       <div class="admin-wrap">
         <h2>Admin panel</h2>
@@ -1057,6 +1155,7 @@
             <div class="stat"><b id="statPosts">0</b><span>Posts</span></div>
             <div class="stat"><b id="statStories">0</b><span>Stories</span></div>
           </div>
+
           <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">👤 Profiles (2)</label>
             <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">
@@ -1078,6 +1177,7 @@
             </div>
             <p id="profileAdminMsg" style="font-size:12px;color:var(--muted);margin:8px 0 0"></p>
           </div>
+
           <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">📊 Dashboard charts</label>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
@@ -1101,6 +1201,7 @@
             </div>
             <button class="btn btn-ghost" type="button" id="btnRefreshDash" style="width:100%;margin-top:12px">Refresh dashboard</button>
           </div>
+
           <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🖼️ Profile / Logo (selected profile only)</label>
             <label>Site name</label>
@@ -1113,6 +1214,7 @@
             <input type="url" id="brandAvatarInput" placeholder="https://… image URL"/>
             <button class="btn btn-ghost" type="button" id="brandApplyBtn" style="width:100%">Apply profile on screen</button>
           </div>
+
           <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">🎨 Theme / Color</label>
             <label>Choose theme (live preview)</label>
@@ -1126,6 +1228,8 @@
             <button class="btn btn-ghost" type="button" id="themeApplyBtn" style="width:100%">Apply theme</button>
             <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4">Click "Publish to all users" to apply this theme on every device.</p>
           </div>
+
+          
           <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:8px">📊 Unlock users (verified only)</label>
             <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.4">Counts members with activated learning access. Regular website visits are not counted.</p>
@@ -1141,6 +1245,7 @@
             </div>
             <button class="btn btn-ghost" type="button" id="btnRefreshStats" style="width:100%;margin-top:10px">Refresh stats</button>
           </div>
+
 <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Post (link only)</label>
             <label>Username</label>
@@ -1157,6 +1262,7 @@
             <input type="text" id="apPlace" placeholder="Classroom"/>
             <button class="btn btn-primary" type="button" id="apAdd" style="width:100%">Publish post</button>
           </div>
+
           <div class="admin-box">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">➕ Add Story (link optional)</label>
             <label>Story name</label>
@@ -1169,11 +1275,13 @@
             <input type="url" id="asMedia" placeholder="https://…"/>
             <button class="btn btn-primary" type="button" id="asAdd" style="width:100%">Publish story</button>
           </div>
+
           <div class="admin-box">
             <label style="font-weight:700;color:var(--accent);margin-bottom:10px">✏️ Edit About (3 slides)</label>
             <div id="aboutEditor"></div>
             <button class="btn btn-ghost" type="button" id="aboutApplyLocal" style="width:100%;margin-top:8px">Preview About on this phone</button>
           </div>
+
           <div class="admin-box">
             <label style="font-weight:700;margin-bottom:8px">Manage · shared feed</label>
             <div id="adminList" style="font-size:12.5px;color:var(--muted);max-height:180px;overflow:auto"></div>
@@ -1197,6 +1305,7 @@
       </div>
     </section>
   </div>
+
   <nav class="tabbar" id="tabbar">
     <div class="tab-indicator" id="tabIndicator"></div>
     <button class="tab active" data-tab="home" type="button">
@@ -1213,6 +1322,8 @@
     </button>
   </nav>
 </div>
+
+<!-- Unlock sheet -->
 <div class="modal" id="unlockModal">
   <div class="sheet">
     <h2>Unlock GMAX</h2>
@@ -1226,6 +1337,8 @@
     <button class="btn btn-ghost" type="button" id="pwClose" style="width:100%;margin-top:10px">Close</button>
   </div>
 </div>
+
+<!-- Story viewer -->
 <div class="viewer" id="storyViewer">
   <div class="viewer-progress" id="viewerProgress"></div>
   <div class="viewer-head">
@@ -1238,6 +1351,7 @@
   <button class="viewer-close" type="button" id="viewerClose">×</button>
   <div class="viewer-body"><div class="slide-card" id="viewerCard"></div></div>
 </div>
+
 <script>
 (function(){
   const DEFAULT_STORIES = [
@@ -1247,26 +1361,31 @@
     { id:'s4', name:'English', title:'One para/day', body:'Rewrite one paragraph every day.', media:'' },
     { id:'s5', name:'Mindset', title:'Consistency', body:'A little every day beats a lot at once.', media:'' }
   ];
+
   const DEFAULT_POSTS = [
     { id:'p1', user:'gmax.learn', place:'Study plan', title:'This week\'s lessons', caption:'Focus topics: Algebra basics + Science revision notes.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
     { id:'p2', user:'gmax.learn', place:'Notes', title:'Revision sheet', caption:'One-page revision: key definitions + 3 solved examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
     { id:'p3', user:'gmax.learn', place:'Practice', title:'Doubt clearing notes', caption:'Full practice sets unlock with an active membership.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
   ];
+
   const DEFAULT_ABOUT = [
     { badge:'Slide 1 · Learning', title:'Clear lessons for serious study', body:'GMAX Hub is an online learning membership. Access structured lessons, notes, and practice material in one place.', bullets:['Daily study tips','Notes & revision sheets','Practice-focused lessons'] },
     { badge:'Slide 2 · Membership', title:'Paid access to full study material', body:'Preview is limited. Full learning library unlocks after you buy a membership plan for your chosen duration.', bullets:['Choose 30 / 60 / 90 day plan','Secure online payment','Instant access after success'] },
     { badge:'Slide 3 · For students', title:'Study anytime on mobile', body:'Built for learners who want organised digital study content without juggling multiple apps.', bullets:['Mobile-friendly lessons','Profile-wise study spaces','Simple membership renewals'] }
   ];
+
   const KEY = 'lumina_unlock_until';
   const DEVICE_KEY = 'lumina_device_id';
   const SEEN_KEY = 'lumina_seen_stories';
   const ADMIN_KEY = 'lumina_admin_until';
   const ADMIN_PIN_CACHE = 'lumina_admin_pin_session'; // only in memory-ish session for publish
+
   let sharedPosts = [];
   let sharedStories = [];
   let sharedAbout = DEFAULT_ABOUT.map(a => ({...a, bullets: [...(a.bullets||[])]}));
   let sharedBrand = { name:'GMAX Hub', tag:'Online learning · study membership', logo:'', avatar:'', bio:'Structured study notes, lessons & practice material.\nJoin a membership to unlock full learning access.' };
   let adminPinSession = '';
+
   const feed = document.getElementById('feed');
   const postsEl = document.getElementById('posts');
   const storiesRow = document.getElementById('storiesRow');
@@ -1277,7 +1396,9 @@
   const pwErr = document.getElementById('pwErr');
   const pwSubmit = document.getElementById('pwSubmit');
   const pwGetKey = document.getElementById('pwGetKeyBtn');
+
   let contentFromServer = false; // true after /api/content loaded or published
+
   function allStories(){
     if (contentFromServer) return sharedStories || [];
     return (sharedStories && sharedStories.length) ? sharedStories : DEFAULT_STORIES;
@@ -1286,6 +1407,7 @@
     if (contentFromServer) return sharedPosts || [];
     return (sharedPosts && sharedPosts.length) ? sharedPosts : DEFAULT_POSTS;
   }
+
   function getProfileId(){
     try{
       const u = new URL(location.href);
@@ -1306,12 +1428,14 @@
       }).catch(()=>{});
     }
   }catch(e){}
+
   function unlockStorageKey(){
     return 'lumina_unlock_until_' + (window.GMAX_PROFILE || 'gmax');
   }
   function planStorageKey(){
     return 'gmax_active_plan_' + (window.GMAX_PROFILE || 'gmax');
   }
+
   function getDeviceId(){
     try{
       let id = localStorage.getItem(DEVICE_KEY);
@@ -1326,6 +1450,7 @@
       return id;
     }catch(e){ return 'DEVICE1'; }
   }
+
   // Per-profile only (no shared fallback — that was showing same plan on both profiles)
   function getUntil(){
     try{
@@ -1356,12 +1481,15 @@
     const p=n=>(n<10?'0':'')+n;
     return p(h)+':'+p(m)+':'+p(sec);
   }
+
   let tick=null;
+  
   function isUnlockedNow(){
     try{
       return getUntil() > Date.now();
     }catch(e){ return false; }
   }
+
   function applyUnlockState(){
     const until = getUntil();
     const ok = until > Date.now();
@@ -1390,8 +1518,10 @@
       step();
       tick=setInterval(step,1000);
     } else timerChip.classList.remove('show');
+  
     try{ renderPosts(); renderStories(); }catch(e){}
   }
+
   function getSeen(){
     try{ return JSON.parse(localStorage.getItem(SEEN_KEY)||'[]'); }catch(e){ return []; }
   }
@@ -1400,9 +1530,11 @@
     s.add(id);
     try{ localStorage.setItem(SEEN_KEY, JSON.stringify([...s])); }catch(e){}
   }
+
   function isVideoUrl(url){
     return /\.(mp4|webm|ogg)(\?|$)/i.test(url||'') || /\/video\//i.test(url||'');
   }
+
   function mediaBlock(url, gradient, title){
     if(url){
       if(isVideoUrl(url)){
@@ -1430,6 +1562,8 @@
       </div>
     </div>`;
   }
+
+  /* ===== Reel player: tap to unmute + only one playing at a time ===== */
   function syncReelButton(reel){
     const btn = reel.querySelector('.reel-toggle');
     const v = reel.querySelector('video');
@@ -1446,6 +1580,7 @@
       const btn = reel.querySelector('.reel-toggle');
       if(!v || !btn || reel.__bound) return;
       reel.__bound = true;
+
       // play-with-sound toggle (must be inside a user gesture)
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
@@ -1454,6 +1589,7 @@
         v.muted = !v.muted;
         syncReelButton(reel);
       });
+
       // double-tap / image-only context fallback: tap on the reel plays-with-sound
       reel.addEventListener('click', (e)=>{
         if(e.target.closest('.reel-toggle')) return;
@@ -1461,15 +1597,20 @@
         if(v.paused) v.play().catch(()=>{});
         syncReelButton(reel);
       });
+
       v.addEventListener('play', ()=> syncReelButton(reel));
       v.addEventListener('pause',()=> syncReelButton(reel));
       v.addEventListener('volumechange', ()=> syncReelButton(reel));
       v.addEventListener('loadeddata', ()=> syncReelButton(reel));
+
       // Promote autoplay even if muted was stripped
       try{ v.muted = true; v.play().catch(()=>{}); }catch(e){}
+
       syncReelButton(reel);
     });
   }
+
+  /* Only one reel plays at a time (viewport-driven) */
   if(typeof window !== 'undefined' && 'IntersectionObserver' in window){
     if(!window.__reelIO){
       window.__reelIO = new IntersectionObserver((entries)=>{
@@ -1503,6 +1644,7 @@
   // initial pass + after every render
   setTimeout(()=>{ bindReels(); watchNewReels(); }, 0);
   document.addEventListener('DOMContentLoaded', ()=>{ bindReels(); watchNewReels(); });
+
     function applyBrand(){
     const name = sharedBrand.name || 'GMAX Hub';
     const tag = sharedBrand.tag || 'Online learning · study membership';
@@ -1562,6 +1704,8 @@
       try{ sp.textContent = String((allPosts()||[]).length); }catch(e){}
     }
   }
+
+  
   const THEME_KEY = 'lumina_theme';
   function applyTheme(name){
     const t = name || 'gold';
@@ -1579,6 +1723,7 @@
     }catch(e){}
     applyTheme(t);
   }
+
   function renderAbout(){
     const deck = document.getElementById('aboutDeck');
     if(!deck) return;
@@ -1597,6 +1742,7 @@
       </article>`;
     }).join('');
   }
+
   function renderAboutEditor(){
     const box = document.getElementById('aboutEditor');
     if(!box) return;
@@ -1615,6 +1761,7 @@
         <textarea data-ab="bullets" data-i="${i}">${(s.bullets||[]).join('\n')}</textarea>
       </div>`).join('');
   }
+
   function readAboutFromEditor(){
     const slides = [0,1,2].map(i => {
       const badge = (document.querySelector(`[data-ab="badge"][data-i="${i}"]`)||{}).value || '';
@@ -1627,6 +1774,7 @@
     });
     return slides;
   }
+
   function renderStories(){
     const seen = new Set(getSeen());
     const STORIES = allStories();
@@ -1647,12 +1795,15 @@
     if(sp) sp.textContent = String(allPosts().length);
     if(ss) ss.textContent = String(STORIES.length);
   }
+
   function renderPosts(){
     const POSTS = allPosts();
     const locked = feed.classList.contains('locked') || !isUnlockedNow();
     postsEl.innerHTML = '';
+
     // Locked: only first 2 posts as preview
     const list = locked ? POSTS.slice(0, 2) : POSTS;
+
     list.forEach(p=>{
       const el = document.createElement('article');
       el.className='post';
@@ -1687,6 +1838,7 @@
       });
       postsEl.appendChild(el);
     });
+
     // After 2 posts when locked → big unlock wall
     if(locked){
       const wall = document.createElement('div');
@@ -1702,6 +1854,7 @@
       const bw = wall.querySelector('#btnWallUnlock');
       if(bw) bw.onclick = ()=> openUnlock();
     }
+
     document.querySelectorAll('.post-media, .post-media img, .post-media video').forEach(node=>{
       node.addEventListener('contextmenu', e=> e.preventDefault());
       node.addEventListener('dragstart', e=> e.preventDefault());
@@ -1711,6 +1864,7 @@
       if(sp) sp.textContent = String((typeof allPosts==='function'?allPosts():[]).length);
     }catch(e){}
   }
+
   function renderAdminList(){
     const box = document.getElementById('adminList');
     if(!box) return;
@@ -1745,6 +1899,7 @@
       };
     });
   }
+
   function refreshAll(){
     applyBrand();
     renderStories();
@@ -1753,6 +1908,7 @@
     renderAdminList();
     renderAboutEditor();
   }
+
   async function loadSharedContent(){
     try{
       const pid = window.GMAX_PROFILE || 'gmax';
@@ -1787,6 +1943,8 @@
     }catch(e){ console.warn('content load', e); }
     refreshAll();
   }
+
+  /* Story viewer */
   let storyIndex = 0, storyTimer = null;
   const viewer = document.getElementById('storyViewer');
   function openStory(i){
@@ -1835,6 +1993,9 @@
     if(e.clientX > mid){ storyIndex++; if(storyIndex>=STORIES.length) closeStory(); else showStoryFrame(); }
     else { storyIndex = Math.max(0, storyIndex-1); showStoryFrame(); }
   });
+
+  
+  /* Soft UI click sound (no external file) */
   let _audioCtx = null;
   function playClickSound(){
     try{
@@ -1855,6 +2016,8 @@
       o.start(t0); o.stop(t0 + 0.1);
     }catch(e){}
   }
+
+  /* Tabs + ARC indicator */
   function moveTabIndicator(activeBtn){
     const bar = document.getElementById('tabbar');
     const ind = document.getElementById('tabIndicator');
@@ -1881,12 +2044,15 @@
   window.addEventListener('load', ()=> moveTabIndicator(document.querySelector('.tab.active')));
   window.addEventListener('resize', ()=> moveTabIndicator(document.querySelector('.tab.active')));
   setTimeout(()=> moveTabIndicator(document.querySelector('.tab.active')), 50);
+
+  /* Unlock */
   function openUnlock(){ modal.classList.add('show'); pwInput.focus(); }
   function closeUnlock(){ modal.classList.remove('show'); }
   document.getElementById('btnOpenUnlock').onclick = openUnlock;
   document.getElementById('btnUnlockTop').onclick = openUnlock;
   document.getElementById('pwClose').onclick = closeUnlock;
   modal.addEventListener('click', e=>{ if(e.target===modal) closeUnlock(); });
+
   function tryVerify(){
     const val = (pwInput.value||'').trim().replace(/\s+/g,'');
     if(!/^\d{12}$/.test(val)){
@@ -1926,6 +2092,7 @@
   }
   pwSubmit.onclick = tryVerify;
   pwInput.addEventListener('keydown', e=>{ if(e.key==='Enter') tryVerify(); });
+
   pwGetKey.addEventListener('click', ()=>{
     pwGetKey.disabled = true;
     pwGetKey.textContent = 'Generating…';
@@ -1951,10 +2118,13 @@
         pwGetKey.textContent = '🔑 Get Key';
       });
   });
+
+  /* Admin */
   const adminPin = document.getElementById('adminPin');
   const adminErr = document.getElementById('adminErr');
   const adminLoginBox = document.getElementById('adminLoginBox');
   const adminDash = document.getElementById('adminDash');
+
   function adminSessionOk(){
     try{ return parseInt(localStorage.getItem(ADMIN_KEY)||'0',10) > Date.now(); }catch(e){ return false; }
   }
@@ -1969,8 +2139,10 @@
       adminLoginBox.style.display='block';
       adminDash.style.display='none';
     }
+  
     try{ loadUnlockStats(); }catch(e){}
   }
+
   async function loadAdminProfilesUI(){
     const sel = document.getElementById('adminProfileSelect');
     const nameIn = document.getElementById('profileDisplayNameInput');
@@ -2005,6 +2177,7 @@
       if(d.stats) renderDashboardCharts(d);
     }catch(e){}
   }
+
   function renderDashboardCharts(d){
     const stats = d.stats || {};
     const totals = d.totals || {};
@@ -2014,6 +2187,7 @@
     if(ts) ts.textContent = String(totals.subscriptions||0);
     if(tv) tv.textContent = String(totals.views||0);
     if(tr) tr.textContent = '₹' + String(totals.revenue||0);
+
     function bar(containerId, key, prefix){
       const el = document.getElementById(containerId);
       if(!el) return;
@@ -2037,7 +2211,9 @@
     bar('chartViews', 'views', '');
     bar('chartRevenue', 'revenue', '₹');
   }
+
   document.getElementById('btnRefreshDash')?.addEventListener('click', ()=>{ try{ loadAdminProfilesUI(); }catch(e){} });
+
   document.getElementById('adminProfileSelect')?.addEventListener('change', async function(){
     const pid = this.value === 'edu' ? 'edu' : 'gmax';
     window.GMAX_PROFILE = pid;
@@ -2066,6 +2242,7 @@
     applyUnlockState();
     try{ loadAdminProfilesUI(); }catch(e){}
   });
+
   document.getElementById('btnSaveProfileName')?.addEventListener('click', async function(){
     const msg = document.getElementById('profileAdminMsg');
     const pin = adminPinSession;
@@ -2127,6 +2304,7 @@
     adminPinSession = '';
     showAdmin();
   };
+
   document.getElementById('apAdd').onclick = ()=>{
     const user = (document.getElementById('apUser').value||'Sunita').trim();
     const avatar = (document.getElementById('apAvatar') && document.getElementById('apAvatar').value || '').trim() || (sharedBrand.avatar||'');
@@ -2150,6 +2328,7 @@
     refreshAll();
     alert('Post draft ready. Press "Publish to all users" so everyone can see it.');
   };
+
   document.getElementById('asAdd').onclick = ()=>{
     const name = (document.getElementById('asName').value||'Story').trim();
     const title = (document.getElementById('asTitle').value||'').trim();
@@ -2166,17 +2345,20 @@
     refreshAll();
     alert('Story draft ready. Press "Publish to all users".');
   };
+
   document.getElementById('aboutApplyLocal').onclick = ()=>{
     sharedAbout = readAboutFromEditor();
     renderAbout();
     alert('About updated on screen. Publish to all users to share it.');
   };
+
   document.getElementById('adminClearCustom').onclick = ()=>{
     if(!confirm('Delete all custom posts/stories? (Removed from all devices after publishing)')) return;
     sharedPosts = [];
     sharedStories = [];
     refreshAll();
   };
+
   document.getElementById('adminPublishAll').onclick = ()=>{
     const err = document.getElementById('publishErr');
     err.textContent = '';
@@ -2247,6 +2429,7 @@
       .catch(e=>{ err.textContent = 'Network: ' + (e.message||''); })
       .finally(()=>{ btn.disabled=false; btn.textContent='🌐 Publish to all users'; });
   };
+
   const brandApply = document.getElementById('brandApplyBtn');
   if(brandApply) brandApply.onclick = ()=>{
     sharedBrand = {
@@ -2263,9 +2446,12 @@
   };
   const btnUS = document.getElementById('btnUnlockStories');
   if(btnUS) btnUS.onclick = openUnlock;
+
     document.addEventListener('contextmenu', function(e){
     if(e.target.closest('.post-media, .no-save, .viewer-body')) e.preventDefault();
   }, {capture:true});
+
+  /* Theme button */
   const themeBtn = document.getElementById('themeApplyBtn');
   if(themeBtn) themeBtn.onclick = ()=>{
     const sel = document.getElementById('themeSelect');
@@ -2274,12 +2460,19 @@
   };
   const themeSel = document.getElementById('themeSelect');
   if(themeSel) themeSel.onchange = ()=> applyTheme(themeSel.value);
+
+  
   document.addEventListener('click', function(e){
     if(e.target.closest('.tab, .btn, .icon-btn, .act, .story')) playClickSound();
   }, true);
+
+  
+  /* Profile unlock */
   document.getElementById('btnProfileUnlock')?.addEventListener('click', ()=>{
     if(typeof openUnlock === 'function') openUnlock();
   });
+
+  /* Section tabs UI only */
   document.querySelectorAll('.profile-section-tabs button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('.profile-section-tabs button').forEach(b=>b.classList.remove('active'));
@@ -2287,6 +2480,9 @@
       playClickSound && playClickSound();
     });
   });
+
+  
+  /* ===== Unlock stats (admin) ===== */
   async function loadUnlockStats(){
     let pin = '';
     try{ pin = sessionStorage.getItem('lumina_admin_pin_session') || ''; }catch(e){}
@@ -2312,8 +2508,12 @@
     }catch(e){}
   }
   document.getElementById('btnRefreshStats')?.addEventListener('click', ()=> loadUnlockStats());
+
+  
+  /* ===== Google Auth (Supabase) ===== */
   let supabaseClient = null;
   let googleUser = null;
+
   async function initSupabase(){
     try{
       if(typeof window.supabase === 'undefined'){
@@ -2341,6 +2541,7 @@
       return null;
     }
   }
+
   async function onGoogleSession(session){
     googleUser = session && session.user ? session.user : null;
     const btnIn = document.getElementById('btnGoogleSignIn');
@@ -2357,6 +2558,7 @@
       localStorage.setItem('gmax_google_email', (googleUser && googleUser.email) || '');
     }catch(e){}
   }
+
   function onGoogleSignedOut(){
     googleUser = null;
     const btnIn = document.getElementById('btnGoogleSignIn');
@@ -2370,6 +2572,7 @@
       localStorage.removeItem('gmax_google_email');
     }catch(e){}
   }
+
   async function signInWithGoogle(){
     if(!supabaseClient) await initSupabase();
     if(!supabaseClient){
@@ -2385,23 +2588,32 @@
     });
     if(error) alert(error.message || 'Google sign-in failed');
   }
+
   async function signOutGoogle(){
     if(!supabaseClient) await initSupabase();
     if(supabaseClient) await supabaseClient.auth.signOut();
     onGoogleSignedOut();
   }
+
   document.getElementById('btnGoogleSignIn')?.addEventListener('click', ()=>{ try{ playClickSound(); }catch(e){} signInWithGoogle(); });
   document.getElementById('btnGoogleSignOut')?.addEventListener('click', ()=>{ try{ playClickSound(); }catch(e){} signOutGoogle(); });
+
+  
+  /* ===== UPI plans → Google Apps Script → Telegram ===== */
   // TODO: set your values
   const FORM_WEBAPP_URL = '/api/submit-payment';
   const UPI_ID = 'sonu77370725@axl';
   const UPI_QR_URL = ''; // optional: QR image URL
+
   const PLAN_MAP = {
     m1: { label: '1 Month', amount: 199, days: 30 },
     m2: { label: '2 Months', amount: 299, days: 60 },
     m3: { label: '3 Months', amount: 399, days: 90 }
   };
+
+  /* ===== Pay Now → UPI deep link → auto-reveal submit on return ===== */
   const PAY_STATE_KEY = 'gmax_pay_state'; // { plan:'m2', ts:1234567890 }
+
   function buildUpiLink(plan, amount, label){
     // pa = payee VPA, pn = payee name, am = amount, cu = INR, tn = transaction note
     const pa = encodeURIComponent(UPI_ID);
@@ -2410,6 +2622,7 @@
     const tn = encodeURIComponent('GMAX - ' + label);
     return 'upi://pay?pa=' + pa + '&pn=' + pn + '&am=' + am + '&cu=INR&tn=' + tn;
   }
+
   function savePayState(plan){
     try{ localStorage.setItem(PAY_STATE_KEY, JSON.stringify({ plan:plan, ts: Date.now() })); }catch(e){}
   }
@@ -2419,6 +2632,7 @@
   function clearPayState(){
     try{ localStorage.removeItem(PAY_STATE_KEY); }catch(e){}
   }
+
   function buildDeepLinks(){
     document.querySelectorAll('.plan-pay').forEach(a=>{
       const plan   = a.getAttribute('data-plan');
@@ -2428,6 +2642,7 @@
       a.setAttribute('href', buildUpiLink(plan, amount, label));
     });
   }
+
   function bindPayNow(root){
     (root||document).querySelectorAll('.plan-pay').forEach(a=>{
       if(a.__bound) return; a.__bound = true;
@@ -2455,12 +2670,14 @@
       }, { capture:true });
     });
   }
+
   function applyPayReturnState(){
     const st = readPayState();
     if(!st || !st.plan) return;
     const plan   = st.plan;
     const amount = (PLAN_MAP[plan] && PLAN_MAP[plan].amount) || (document.querySelector('.plan-btn[data-plan="'+plan+'"]')?.getAttribute('data-amount')) || '199';
     const label  = (PLAN_MAP[plan] && PLAN_MAP[plan].label)  || (document.querySelector('.plan-btn[data-plan="'+plan+'"]')?.getAttribute('data-label')) || plan;
+
     // Activate the matching plan (so pay-panel opens) and pre-fill hidden fields
     const planBtn = document.querySelector('.plan-btn[data-plan="'+plan+'"]');
     if(planBtn){ try{ planBtn.click(); }catch(e){} }
@@ -2468,12 +2685,15 @@
     const amtIn  = document.getElementById('payAmount');
     if(planIn) planIn.value = plan;
     if(amtIn)  amtIn.value  = amount;
+
     // Show the "welcome back" banner
     const hint = document.getElementById('payReturnHint');
     if(hint) hint.hidden = false;
+
     // Apply the 'pending' visual to the matching Pay Now button (it might still be in DOM)
     const payA = document.querySelector('.plan-pay[data-plan="'+plan+'"]');
     if(payA){ payA.classList.add('is-pending'); }
+
     // Scroll the UTR input into view so user sees it the moment they return
     const utr = document.getElementById('payUtr');
     if(utr){
@@ -2484,12 +2704,16 @@
       }
     }
   }
+
   // Run when DOM ready + on visibility change (user comes back from UPI app) + on Pageshow (bfcache)
   function initPayNowFlow(){
     try{ buildDeepLinks(); }catch(e){}
     try{ bindPayNow(); }catch(e){}
     try{ applyPayReturnState(); }catch(e){}
   }
+
+  
+  /* Subscribe page navigation */
   function openSubscribePage(){
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     const el = document.getElementById('screenSubscribe');
@@ -2513,6 +2737,8 @@
   }
   document.getElementById('btnOpenSubscribe')?.addEventListener('click', openSubscribePage);
   document.getElementById('btnSubBack')?.addEventListener('click', closeSubscribePage);
+
+  
   const PLAN_META = {
     '1 Month': { name:'1 MONTH', price:'199', period:'/ 30 days', days:30 },
     '2 Months': { name:'2 MONTHS', price:'299', period:'/ 60 days', days:60 },
@@ -2522,6 +2748,7 @@
     m3: { name:'3 MONTHS', price:'399', period:'/ 90 days', days:90 }
   };
   const PLAN_STORE = 'gmax_active_plan'; // legacy; use planStorageKey()
+
   function saveActivePlan(plan, until){
     const meta = PLAN_META[plan] || PLAN_META['1 Month'] || PLAN_META.m1;
     try{
@@ -2582,6 +2809,7 @@
       try{ localStorage.removeItem(planStorageKey()); }catch(e){}
     }
   }
+
   function setupUpiPayUI(){
     const upiEl = document.getElementById('payUpiId');
     if(upiEl) upiEl.textContent = UPI_ID;
@@ -2598,6 +2826,7 @@
     });
     // Flip this to true later to show UPI + UTR manual panel again
     window.ENABLE_MANUAL_UPI = false;
+
     function applyManualPayMode(){
       const panel = document.getElementById('payPanel');
       if(!panel) return;
@@ -2609,11 +2838,13 @@
       }
     }
     applyManualPayMode();
+
     window.PAYMENT_LINKS = {
       '199': 'https://rzp.io/rzp/SkoFTRY9',
       '299': 'https://rzp.io/rzp/P1XAsMdw',
       '399': 'https://rzp.io/rzp/39Ghyxgr'
     };
+
     window.startRazorpayForPlan = async function(plan, amount, label, triggerBtn){
       const planLabel = label || (PLAN_MAP[plan]&&PLAN_MAP[plan].label) || plan;
       const amt = String(amount || '199').replace(/[^0-9]/g, '') || '199';
@@ -2636,8 +2867,10 @@
             amount: amt
           })
         }).catch(()=>({}));
+
         // Open Razorpay Payment Link
         window.open(link, '_blank');
+
         // Poll until webhook activates access
         let tries = 0;
         const maxTries = 90; // ~3 min if 2s
@@ -2669,6 +2902,7 @@
         if(triggerBtn) triggerBtn.disabled = false;
       }
     };
+
     document.querySelectorAll('.js-pay-now').forEach(btn=>{
       btn.addEventListener('click', (ev)=>{
         ev.preventDefault();
@@ -2683,6 +2917,7 @@
         window.startRazorpayForPlan(plan, amount, label, btn);
       });
     });
+
     document.querySelectorAll('.plan-btn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         document.querySelectorAll('.plan-btn').forEach(b=>b.classList.remove('active'));
@@ -2706,6 +2941,7 @@
         }
       });
     });
+    
     document.getElementById('btnPayRazorpay')?.addEventListener('click', async ()=>{
       const plan = document.getElementById('payPlan')?.value||'m1';
       const amount = document.getElementById('payAmount')?.value||'199';
@@ -2713,6 +2949,7 @@
       const btn = document.getElementById('btnPayRazorpay');
       window.startRazorpayForPlan(plan, amount, label, btn);
     });
+
     document.getElementById('payForm')?.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
       const msg = document.getElementById('payFormMsg');
@@ -2774,6 +3011,7 @@
         if(sub) sub.disabled = false;
       }
     });
+
     // Poll payment status every 3 seconds
     window.startPaymentPolling = function startPaymentPolling(id){
       let tries = 0;
@@ -2809,6 +3047,7 @@
         }catch(e){}
       }, 3000);
     }
+
     document.getElementById('btnCopyUnlockCode')?.addEventListener('click', ()=>{
       const code = document.getElementById('payUnlockCode')?.textContent || '';
       if(!code) return;
@@ -2817,11 +3056,14 @@
         if(btn){ const t = btn.textContent; btn.textContent = 'Copied!'; setTimeout(()=>btn.textContent=t, 2000); }
       }).catch(()=>{});
     });
+
     document.getElementById('paySuccessClose')?.addEventListener('click', ()=>{
       const modal = document.getElementById('paySuccessModal');
       if(modal) modal.hidden = true;
     });
   }
+
+  /* init */
   try{ setupUpiPayUI(); }catch(e){}
   try{
     const did = getDeviceId();
@@ -2836,6 +3078,7 @@
         }
       }).catch(()=>{});
   }catch(e){}
+
   // If payment still pending, restore waiting only inside payment panel
   function restorePendingPaymentUI(){
     try {
@@ -2855,6 +3098,7 @@
     } catch(e){}
   }
   restorePendingPaymentUI();
+
   loadTheme();
   try{ initSupabase(); }catch(e){}
   try{ applyProfileUI(); }catch(e){}
@@ -2862,6 +3106,7 @@
   showAdmin();
   loadSharedContent();
   try{ initPayNowFlow(); }catch(e){}
+
   window.addEventListener('pageshow', ()=>{
     try{ initPayNowFlow(); }catch(e){}
     restorePendingPaymentUI();
@@ -2873,6 +3118,8 @@
   });
   // Also re-bind whenever admin publishes (DOM may re-render plan buttons after returning to subscribe tab)
   setInterval(()=>{ try{ bindPayNow(); }catch(e){} }, 1500);
+
+  /* Reel rebind on DOM changes (after every renderPosts / dynamic content) */
   if(!window.__reelBindMO){
     window.__reelBindMO = new MutationObserver(()=>{ try{ bindReels(); watchNewReels(); }catch(e){} });
     window.__reelBindMO.observe(document.body, { childList:true, subtree:true });
@@ -2880,5 +3127,7 @@
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+
+
 </body>
 </html>
