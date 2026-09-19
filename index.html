@@ -887,6 +887,21 @@
         </div>
         <div id="planBuyArea">
         <div class="plan-row" id="planRow">
+          <div class="active-plan-wrap buy-plan-card" data-plan="m0" data-amount="1" data-label="Test 20 min">
+            <div class="active-plan-badge">TEST</div>
+            <div class="active-plan-card">
+              <div class="ap-kicker">TEST ACCESS</div>
+              <div class="ap-price">₹1<small>/ 20 min</small></div>
+              <div class="ap-remain">Only for payment testing</div>
+              <ul>
+                <li>Unlocks for 20 minutes</li>
+                <li>Same auto-unlock flow</li>
+                <li>Remove after testing</li>
+              </ul>
+              <button type="button" class="ap-active-btn js-pay-now" data-plan="m0" data-amount="1" data-label="Test 20 min">Pay Now · ₹1 (Test)</button>
+            </div>
+          </div>
+
           <div class="active-plan-wrap buy-plan-card" data-plan="m1" data-amount="199" data-label="1 Month">
             <div class="active-plan-badge">1 Month</div>
             <div class="active-plan-card">
@@ -2397,6 +2412,7 @@
   const UPI_ID = 'sonu77370725@axl';
   const UPI_QR_URL = ''; // optional: QR image URL
   const PLAN_MAP = {
+    m0: { label: 'Test 20 min', amount: 1, days: 0 },
     m1: { label: '1 Month', amount: 199, days: 30 },
     m2: { label: '2 Months', amount: 299, days: 60 },
     m3: { label: '3 Months', amount: 399, days: 90 }
@@ -2610,6 +2626,7 @@
     }
     applyManualPayMode();
     window.PAYMENT_LINKS = {
+      '1': 'https://rzp.io/rzp/4p5HZ49V',
       '199': 'https://rzp.io/rzp/SkoFTRY9',
       '299': 'https://rzp.io/rzp/P1XAsMdw',
       '399': 'https://rzp.io/rzp/39Ghyxgr'
@@ -2619,7 +2636,9 @@
       const amt = String(amount || '199').replace(/[^0-9]/g, '') || '199';
       const link = window.PAYMENT_LINKS[amt];
       if(!link){
-        alert('Payment link missing for this plan');
+        alert(amt === '1'
+          ? '₹1 test link missing. Razorpay Live mein ₹1 Payment Link banao aur index.html mein PAYMENT_LINKS[\'1\'] mein paste karo.'
+          : 'Payment link missing for this plan');
         return;
       }
       if(triggerBtn) triggerBtn.disabled = true;
