@@ -11,9 +11,18 @@ function normalizeProfile(id) {
 
 function planDaysFromAmount(amount) {
   const a = parseInt(String(amount).replace(/[^0-9]/g, ''), 10) || 0;
+  if (a === 1) return 0; // test plan uses durationSec
   if (a >= 399) return 90;
   if (a >= 299) return 60;
   return 30;
+}
+
+function durationSecFromAmount(amount) {
+  const a = parseInt(String(amount).replace(/[^0-9]/g, ''), 10) || 0;
+  if (a === 1) return 20 * 60; // ₹1 test → 20 minutes
+  if (a >= 399) return 90 * 24 * 60 * 60;
+  if (a >= 299) return 60 * 24 * 60 * 60;
+  return 30 * 24 * 60 * 60;
 }
 
 function redisEnv() {
@@ -83,6 +92,7 @@ module.exports = async function handler(req, res) {
 
   const id = crypto.randomBytes(6).toString('hex');
   const days = planDaysFromAmount(amount);
+  const durationSec = durationSecFromAmount(amount);
   const record = {
     id,
     deviceId,
@@ -90,6 +100,7 @@ module.exports = async function handler(req, res) {
     plan,
     amount,
     days,
+    durationSec,
     status: 'pending',
     createdAt: new Date().toISOString()
   };
@@ -109,4 +120,3 @@ module.exports = async function handler(req, res) {
 
   return res.status(200).json({ ok: true, id: id, amount: amount, plan: plan, profileId: profileId });
 };
-
