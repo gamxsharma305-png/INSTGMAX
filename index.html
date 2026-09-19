@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>GMAX Hub</title>
+<title>GMAX Hub – Online Learning Membership</title>
 <meta name="theme-color" content="#12081C"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -329,7 +329,7 @@
   .stat b{display:block;font-size:20px}
   .stat span{font-size:11px;color:var(--muted)}
 
-  /* Bottom nav — Instagram style */
+  /* Bottom navigation */
   /* ===== ARC-style animated tab bar ===== */
   .tabbar{
     position:absolute;left:12px;right:12px;bottom:calc(10px + var(--safe-b));
@@ -433,7 +433,7 @@
   }
 
 
-  /* ===== Profile header (Instagram-style) ===== */
+  /* ===== Profile / learning header ===== */
   .profile-wrap{
     padding:0 0 6px;
     background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, var(--bg)) 0%, var(--bg) 70%);position:relative;isolation:isolate;}
@@ -851,12 +851,12 @@
       <div class="logo" id="brandLogo">L</div>
       <div>
         <h1 id="brandName">GMAX Hub</h1>
-        <p id="brandTag">GMAX Hub · gated feed</p>
+        <p id="brandTag">Online learning · study membership</p>
       </div>
     </div>
     <div class="top-actions">
       <span class="timer-chip" id="timerChip">⏱ <span id="timerVal">36:00:00</span></span>
-      <button class="icon-btn" id="btnUnlockTop" title="Unlock" type="button" aria-label="Unlock">
+      <button class="icon-btn" id="btnUnlockTop" title="Unlock learning access" type="button" aria-label="Unlock learning access">
         <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0"/></svg>
       </button>
     </div>
@@ -865,13 +865,13 @@
   <div class="screens">
     <!-- HOME / FEED -->
     <section class="screen active" id="screenHome">
-      <!-- PROFILE (Instagram-style) -->
+      <!-- PROFILE / learning brand -->
       <div class="profile-wrap" id="profileWrap">
         <div class="profile-cover" id="profileCover"></div>
         <div class="profile-top-row">
-          <div class="profile-brand-pill" id="brandPill">GMAX HUB</div>
+          <div class="profile-brand-pill" id="brandPill">GMAX LEARN</div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            <button type="button" class="profile-login-btn" id="btnProfileUnlock">Unlock</button>
+            <button type="button" class="profile-login-btn" id="btnProfileUnlock">Unlock Access</button>
           </div>
         </div>
         <div class="profile-main">
@@ -882,20 +882,20 @@
             <span id="profileName">GMAX Hub</span>
             <span class="verified" title="Verified">✓</span>
           </div>
-          <div class="profile-handle" id="profileHandle">@gmaxhub</div>
-          <button type="button" class="profile-sub-btn" id="btnOpenSubscribe">Subscribe</button>
+          <div class="profile-handle" id="profileHandle">@gmaxlearn</div>
+          <button type="button" class="profile-sub-btn" id="btnOpenSubscribe">Get Membership</button>
           <p id="monthPayMsg"></p>
-          <p class="profile-bio" id="profileBio">Instagram was just a sneak peek… The real deal is only here.<br/>Ready to see? 😉</p>
+          <p class="profile-bio" id="profileBio">Structured study notes, lessons & practice material.<br/>Join a membership to unlock full learning access.</p>
           <div class="profile-stats">
-            <span><b id="statPosts">0</b> posts</span>
-            <span><b id="statFollowers">—</b> followers</span>
-            <span><b id="statSubs">—</b> subscribers</span>
+            <span><b id="statPosts">0</b> lessons</span>
+            <span><b id="statFollowers">—</b> learners</span>
+            <span><b id="statSubs">—</b> members</span>
           </div>
         </div>
         <div class="profile-section-tabs">
           <button type="button" class="active" data-sec="posts">
             <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
-            Posts
+            Lessons
           </button>
           <button type="button" data-sec="photos">
             <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5-9 9"/></svg>
@@ -915,15 +915,13 @@
       <!-- STORIES under profile -->
       <div class="stories-wrap locked" id="storiesWrap">
         <div class="stories" id="storiesRow"></div>
-        <div class="stories-lock">🔒 Stories unlock after subscribing<br/><button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock</button></div>
+        <div class="stories-lock">🔒 Daily study tips unlock with membership<br/><button class="btn btn-primary" type="button" id="btnUnlockStories" style="margin-top:8px">Unlock Access</button></div>
       </div>
 
       <!-- FEED -->
       <div class="feed locked" id="feed">
         <div class="lock-banner">
-          <h3>🔒 This feed is locked</h3>
-          <p>Only 2 posts previewed. Unlock the full feed with a <b>12-digit code</b> (valid 36 hours) or subscribe for ₹199 / month.</p>
-          <button class="btn btn-primary" type="button" id="btnOpenUnlock">Start · Unlock feed</button>
+          <h3>🔒 Full lessons are locked</h3><p>Only a short preview is visible. Buy a <b>learning membership</b> to unlock complete notes, videos and practice material.</p><button class="btn btn-primary" type="button" id="btnOpenUnlock">View membership plans</button>
         </div>
         <div id="posts"></div>
       </div>
@@ -947,9 +945,9 @@
     <section class="screen" id="screenSubscribe">
       <div class="sub-page-top">
         <button type="button" class="sub-back" id="btnSubBack">← Back</button>
-        <h2>Subscribe</h2>
+        <h2>Learning membership</h2>
       </div>
-      <p class="sub-intro">Choose a plan and pay online. Access unlocks after successful payment.</p>
+      <p class="sub-intro">Choose a learning membership plan. After successful payment, your study access activates for this profile.</p>
       <div class="sub-page-body">
         <div class="active-plan-wrap" id="activePlanWrap" hidden>
           <div class="active-plan-badge">Active plan</div>
@@ -958,13 +956,13 @@
             <div class="ap-price">₹<span id="apPrice">199</span><small id="apPeriod">/ 30 days</small></div>
             <div class="ap-remain" id="apRemain">Remaining: —</div>
             <ul>
-              <li>Unlimited photos</li>
-              <li>Unlimited videos</li>
-              <li>Full feed — no 2-post lock</li>
-              <li>Stories unlocked</li>
-              <li>No daily limit</li>
+              <li>Full lesson library</li>
+              <li>Video explanations</li>
+              <li>Complete notes & practice sets</li>
+              <li>Daily study tips unlocked</li>
+              <li>Learn anytime during plan period</li>
             </ul>
-            <button type="button" class="ap-active-btn" disabled>✓ Plan Active</button>
+            <button type="button" class="ap-active-btn" disabled>✓ Membership Active</button>
           </div>
         </div>
         <div id="planBuyArea">
@@ -975,13 +973,13 @@
             <div class="active-plan-card">
               <div class="ap-kicker">1 MONTH</div>
               <div class="ap-price">₹199<small>/ 30 days</small></div>
-              <div class="ap-remain">Full feed unlock</div>
+              <div class="ap-remain">Full learning access</div>
               <ul>
-                <li>Unlimited photos</li>
-                <li>Unlimited videos</li>
-                <li>Full feed — no 2-post lock</li>
-                <li>Stories unlocked</li>
-                <li>No daily limit</li>
+                <li>Full lesson library</li>
+                <li>Video explanations</li>
+                <li>Complete notes & practice sets</li>
+                <li>Daily study tips unlocked</li>
+                <li>Learn anytime during plan period</li>
               </ul>
               <button type="button" class="ap-active-btn js-pay-now" data-plan="m1" data-amount="199" data-label="1 Month">Pay Now · ₹199</button>
             </div>
@@ -992,13 +990,13 @@
             <div class="active-plan-card">
               <div class="ap-kicker">2 MONTHS</div>
               <div class="ap-price">₹299<small>/ 60 days</small></div>
-              <div class="ap-remain">Full feed unlock</div>
+              <div class="ap-remain">Full learning access</div>
               <ul>
-                <li>Unlimited photos</li>
-                <li>Unlimited videos</li>
-                <li>Full feed — no 2-post lock</li>
-                <li>Stories unlocked</li>
-                <li>No daily limit</li>
+                <li>Full lesson library</li>
+                <li>Video explanations</li>
+                <li>Complete notes & practice sets</li>
+                <li>Daily study tips unlocked</li>
+                <li>Learn anytime during plan period</li>
               </ul>
               <button type="button" class="ap-active-btn js-pay-now" data-plan="m2" data-amount="299" data-label="2 Months">Pay Now · ₹299</button>
             </div>
@@ -1009,13 +1007,13 @@
             <div class="active-plan-card">
               <div class="ap-kicker">3 MONTHS</div>
               <div class="ap-price">₹399<small>/ 90 days</small></div>
-              <div class="ap-remain">Full feed unlock</div>
+              <div class="ap-remain">Full learning access</div>
               <ul>
-                <li>Unlimited photos</li>
-                <li>Unlimited videos</li>
-                <li>Full feed — no 2-post lock</li>
-                <li>Stories unlocked</li>
-                <li>No daily limit</li>
+                <li>Full lesson library</li>
+                <li>Video explanations</li>
+                <li>Complete notes & practice sets</li>
+                <li>Daily study tips unlocked</li>
+                <li>Learn anytime during plan period</li>
               </ul>
               <button type="button" class="ap-active-btn js-pay-now" data-plan="m3" data-amount="399" data-label="3 Months">Pay Now · ₹399</button>
             </div>
@@ -1145,7 +1143,7 @@
 <section class="screen" id="screenAdmin">
       <div class="admin-wrap">
         <h2>Admin panel</h2>
-        <p class="sub">PIN is checked only on the server (Vercel env). Never stored in this page source as plain text for production.</p>
+        <p class="sub">Manage lessons and membership settings. PIN is verified only on the server.</p>
         <div class="admin-box" id="adminLoginBox">
           <label>Admin PIN</label>
           <input type="password" id="adminPin" placeholder="••••••" autocomplete="off"/>
@@ -1209,7 +1207,7 @@
             <label>Site name</label>
             <input type="text" id="brandNameInput" placeholder="GMAX Hub" value="GMAX Hub"/>
             <label>Tagline</label>
-            <input type="text" id="brandTagInput" placeholder="GMAX Hub · gated feed"/>
+            <input type="text" id="brandTagInput" placeholder="Online learning · study membership"/>
             <label>Main logo image link (top left)</label>
             <input type="url" id="brandLogoInput" placeholder="https://… image URL"/>
             <label>Default post avatar image link</label>
@@ -1234,7 +1232,7 @@
           
           <div class="admin-box" style="margin-top:14px">
             <label style="font-weight:700;color:var(--accent);margin-bottom:8px">📊 Unlock users (verified only)</label>
-            <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.4">Counts only users who verified / unlocked with a 12-digit code. Regular visits are not counted.</p>
+            <p style="font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.4">Counts members with activated learning access. Regular website visits are not counted.</p>
             <div style="display:flex;gap:12px;flex-wrap:wrap">
               <div style="flex:1;min-width:120px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.2)">
                 <div style="font-size:11px;color:var(--muted)">Today</div>
@@ -1329,8 +1327,8 @@
 <div class="modal" id="unlockModal">
   <div class="sheet">
     <h2>Unlock GMAX</h2>
-    <p class="sub">1) Tap <b>Get Key</b> (AroLinks link) → copy 12-digit code<br/>2) Paste below → Verify · valid <b>36 hours</b></p>
-    <input id="pwInput" type="text" inputmode="numeric" maxlength="12" placeholder="12-digit code" autocomplete="one-time-code"/>
+    <p class="sub">For membership access, open <b>Get Membership</b> and complete online payment.<br/>If you already have access on this device, it activates automatically after payment success.</p>
+    <input id="pwInput" type="text" inputmode="numeric" maxlength="12" placeholder="Optional access code" autocomplete="one-time-code" style="display:none"/>
     <div class="err" id="pwErr"></div>
     <div class="row">
       <button class="btn btn-ghost" type="button" id="pwGetKeyBtn">🔑 Get Key</button>
@@ -1365,15 +1363,15 @@
   ];
 
   const DEFAULT_POSTS = [
-    { id:'p1', user:'gmax.hub', place:'Classroom', title:'Week plan', caption:'This week: Algebra + Chemical reactions.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
-    { id:'p2', user:'gmax.hub', place:'Notes', title:'Revision sheet', caption:'One-page revision: definitions + 3 examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
-    { id:'p3', user:'mentor.aria', place:'Live', title:'Doubt hour', caption:'Full resources unlock after verification.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
+    { id:'p1', user:'gmax.learn', place:'Study plan', title:'This week\'s lessons', caption:'Focus topics: Algebra basics + Science revision notes.', likes:128, time:'2 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#5b2d8e,#1a0a2e)' },
+    { id:'p2', user:'gmax.learn', place:'Notes', title:'Revision sheet', caption:'One-page revision: key definitions + 3 solved examples.', likes:86, time:'5 HOURS AGO', media:'', gradient:'linear-gradient(160deg,#2d5b8e,#0a1a2e)' },
+    { id:'p3', user:'gmax.learn', place:'Practice', title:'Doubt clearing notes', caption:'Full practice sets unlock with an active membership.', likes:204, time:'1 DAY AGO', media:'', gradient:'linear-gradient(160deg,#8e2d5b,#2e0a1a)' }
   ];
 
   const DEFAULT_ABOUT = [
-    { badge:'Slide 1 · Mentor', title:'Learn with a clear, calm feed', body:'GMAX turns your classroom into an Instagram-style stream — stories for quick tips, posts for deep lessons.', bullets:['Stories for daily micro-lessons','Posts for notes & revisions','Like & share what helps'] },
-    { badge:'Slide 2 · Access', title:'Private until you unlock', body:'Content stays blurred until a valid 12-digit key is verified. Session lasts 36 hours.', bullets:['Get Key → AroLinks link','Reveal 12-digit code','Verify · study 36 hours'] },
-    { badge:'Slide 3 · For educators', title:'Built for your classroom', body:'Glass UI, purple brand, admin on server — deploy on Vercel and share one link.', bullets:['Admin PIN in server env','Token not in browser','Mobile-first layout'] }
+    { badge:'Slide 1 · Learning', title:'Clear lessons for serious study', body:'GMAX Hub is an online learning membership. Access structured lessons, notes, and practice material in one place.', bullets:['Daily study tips','Notes & revision sheets','Practice-focused lessons'] },
+    { badge:'Slide 2 · Membership', title:'Paid access to full study material', body:'Preview is limited. Full learning library unlocks after you buy a membership plan for your chosen duration.', bullets:['Choose 30 / 60 / 90 day plan','Secure online payment','Instant access after success'] },
+    { badge:'Slide 3 · For students', title:'Study anytime on mobile', body:'Built for learners who want organised digital study content without juggling multiple apps.', bullets:['Mobile-friendly lessons','Profile-wise study spaces','Simple membership renewals'] }
   ];
 
   const KEY = 'lumina_unlock_until';
@@ -1385,7 +1383,7 @@
   let sharedPosts = [];
   let sharedStories = [];
   let sharedAbout = DEFAULT_ABOUT.map(a => ({...a, bullets: [...(a.bullets||[])]}));
-  let sharedBrand = { name:'GMAX Hub', tag:'GMAX Hub · gated feed', logo:'', avatar:'' };
+  let sharedBrand = { name:'GMAX Hub', tag:'Online learning · study membership', logo:'', avatar:'', bio:'Structured study notes, lessons & practice material.\nJoin a membership to unlock full learning access.' };
   let adminPinSession = '';
 
   const feed = document.getElementById('feed');
@@ -1649,7 +1647,7 @@
 
     function applyBrand(){
     const name = sharedBrand.name || 'GMAX Hub';
-    const tag = sharedBrand.tag || 'GMAX Hub · gated feed';
+    const tag = sharedBrand.tag || 'Online learning · study membership';
     const logo = sharedBrand.logo || '';
     const avatar = sharedBrand.avatar || '';
     const elName = document.getElementById('brandName');
@@ -1670,7 +1668,7 @@
     const name = (sharedBrand && sharedBrand.name) || 'GMAX Hub';
     const avatar = (sharedBrand && sharedBrand.avatar) || '';
     const logo = (sharedBrand && sharedBrand.logo) || '';
-    const bio = (sharedBrand && sharedBrand.bio) || 'Instagram was just a sneak peek… The real deal is only here.\nReady to see? 😉';
+    const bio = (sharedBrand && sharedBrand.bio) || 'Structured study notes, lessons & practice material.\nJoin a membership to unlock full learning access.';
     const followers = (sharedBrand && sharedBrand.followers) || '—';
     const subs = (sharedBrand && sharedBrand.subscribers) || '—';
     const n = document.getElementById('profileName');
@@ -1849,7 +1847,7 @@
         <div class="unlock-wall-inner">
           <div style="font-size:32px;margin-bottom:8px">🔒</div>
           <h3>This feed is locked</h3>
-          <p>You have seen 2 posts. Unlock with a 12-digit code to view the full feed, stories and media.</p>
+          <p>You have seen a short preview. Buy a learning membership to access full lessons, notes and study tips.</p>
           <button class="btn btn-primary" type="button" id="btnWallUnlock">Unlock now</button>
         </div>`;
       postsEl.appendChild(wall);
@@ -2802,12 +2800,12 @@
       if(p) p.textContent = rec.price || '199';
       if(per) per.textContent = rec.period || '';
       if(rem) rem.textContent = 'Remaining: ' + fmtRemain(until - Date.now());
-      if(subBtn) subBtn.textContent = 'Plan Active';
+      if(subBtn) subBtn.textContent = 'Membership Active';
     } else {
       if(wrap) wrap.hidden = true;
       if(buy) buy.hidden = false;
       if(intro) intro.style.display = '';
-      if(subBtn) subBtn.textContent = 'Subscribe';
+      if(subBtn) subBtn.textContent = 'Get Membership';
       try{ localStorage.removeItem(planStorageKey()); }catch(e){}
     }
   }
@@ -2841,87 +2839,66 @@
     }
     applyManualPayMode();
 
+    window.PAYMENT_LINKS = {
+      '199': 'https://rzp.io/rzp/SkoFTRY9',
+      '299': 'https://rzp.io/rzp/P1XAsMdw',
+      '399': 'https://rzp.io/rzp/39Ghyxgr'
+    };
+
     window.startRazorpayForPlan = async function(plan, amount, label, triggerBtn){
-      const msg = document.getElementById('payFormMsg');
-      const name = (document.getElementById('payName')?.value||'').trim() || 'Customer';
-      const email = (document.getElementById('payEmail')?.value||'').trim() || ('user@'+(window.GMAX_PROFILE||'gmax')+'.app');
-      const mobile = (document.getElementById('payMobile')?.value||'').trim() || '9999999999';
       const planLabel = label || (PLAN_MAP[plan]&&PLAN_MAP[plan].label) || plan;
-      if(typeof Razorpay === 'undefined'){
-        alert('Payment system loading. Please refresh.');
+      const amt = String(amount || '199').replace(/[^0-9]/g, '') || '199';
+      const link = window.PAYMENT_LINKS[amt];
+      if(!link){
+        alert('Payment link missing for this plan');
         return;
       }
       if(triggerBtn) triggerBtn.disabled = true;
       try{
-        const res = await fetch('/api/create-order', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
+        const deviceId = (typeof getDeviceId === 'function' ? getDeviceId() : '');
+        const profileId = window.GMAX_PROFILE || 'gmax';
+        await fetch('/api/register-pending', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name, email, mobile,
+            deviceId: deviceId,
+            profileId: profileId,
             plan: planLabel,
-            amount: amount,
-            deviceId: (typeof getDeviceId === 'function' ? getDeviceId() : ''),
-            profileId: window.GMAX_PROFILE || 'gmax'
+            amount: amt
           })
-        });
-        const d = await res.json().catch(()=>({ok:false}));
-        if(!d.ok){
-          alert(d.error || 'Could not start payment');
-          if(triggerBtn) triggerBtn.disabled = false;
-          return;
-        }
-        const options = {
-          key: d.keyId,
-          amount: d.amount,
-          currency: d.currency || 'INR',
-          name: 'GMAX Hub',
-          description: planLabel + ' · ' + (window.GMAX_PROFILE || 'gmax'),
-          order_id: d.orderId,
-          prefill: { name: name, email: email, contact: mobile },
-          theme: { color: '#d4a017' },
-          handler: async function (response){
-            try{
-              const vr = await fetch('/api/verify-payment', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  localId: d.localId
-                })
-              });
-              const vd = await vr.json().catch(()=>({ok:false}));
-              if(vd.ok && vd.until){
-                try{
-                  if(vd.plan) saveActivePlan(vd.plan, vd.until);
-                  setUntil(vd.until);
-                  applyUnlockState();
-                }catch(e){}
-                alert('Payment successful. Access is active.');
-                try{ closeSubscribePage(); }catch(e){}
-              } else {
-                alert((vd && vd.error) || 'Verify failed');
-              }
-            }catch(e){
-              alert('Verify network error');
-            }
+        }).catch(()=>({}));
+
+        // Open Razorpay Payment Link
+        window.open(link, '_blank');
+
+        // Poll until webhook activates access
+        let tries = 0;
+        const maxTries = 90; // ~3 min if 2s
+        const timer = setInterval(async ()=>{
+          tries++;
+          if(tries > maxTries){
+            clearInterval(timer);
             if(triggerBtn) triggerBtn.disabled = false;
-          },
-          modal: {
-            ondismiss: function(){
-              if(triggerBtn) triggerBtn.disabled = false;
-            }
+            return;
           }
-        };
-        const rzp = new Razorpay(options);
-        rzp.on('payment.failed', function(){
-          alert('Payment failed. Please try again.');
-          if(triggerBtn) triggerBtn.disabled = false;
-        });
-        rzp.open();
+          try{
+            const r = await fetch('/api/payment-status?deviceId=' + encodeURIComponent(deviceId) + '&profileId=' + encodeURIComponent(profileId));
+            const d = await r.json();
+            if(d && d.status === 'approved' && d.until > Date.now()){
+              clearInterval(timer);
+              try{
+                if(d.plan) saveActivePlan(d.plan, d.until);
+                setUntil(d.until);
+                applyUnlockState();
+              }catch(e){}
+              if(triggerBtn) triggerBtn.disabled = false;
+              alert('Payment successful. Learning access is active.');
+              try{ closeSubscribePage(); }catch(e){}
+            }
+          }catch(e){}
+        }, 2000);
       }catch(e){
-        alert('Network error');
+        alert('Could not start payment');
         if(triggerBtn) triggerBtn.disabled = false;
       }
     };
@@ -3007,7 +2984,7 @@
           key: d.keyId,
           amount: d.amount,
           currency: d.currency || 'INR',
-          name: 'GMAX Hub',
+          name: 'GMAX Hub Learning',
           description: planLabel + ' · ' + (window.GMAX_PROFILE || 'gmax'),
           order_id: d.orderId,
           prefill: { name: name, email: email, contact: mobile },
