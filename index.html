@@ -835,6 +835,11 @@
   }
   #planBuyArea[hidden], #activePlanWrap[hidden]{display:none !important}
 
+  .buy-plan-card{margin-top:22px;}
+  .ap-active-btn.js-pay-now{cursor:pointer;}
+  .ap-active-btn.js-pay-now:active{transform:scale(.98);}
+
+
 </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -944,7 +949,7 @@
         <button type="button" class="sub-back" id="btnSubBack">← Back</button>
         <h2>Subscribe</h2>
       </div>
-      <p class="sub-intro">Choose a plan → Pay via UPI → Submit your UTR. Access activates once approved.</p>
+      <p class="sub-intro">Choose a plan and pay online. Access unlocks after successful payment.</p>
       <div class="sub-page-body">
         <div class="active-plan-wrap" id="activePlanWrap" hidden>
           <div class="active-plan-badge">Active plan</div>
@@ -964,38 +969,61 @@
         </div>
         <div id="planBuyArea">
         <div class="plan-row" id="planRow">
-          <button type="button" class="plan-btn" data-plan="m1" data-amount="199" data-label="1 Month">
-            <span><div>1 Month Access</div><div class="plan-tag">Full feed · 30 days</div></span>
-            <span class="plan-price">₹199</span>
-          </button>
-          <a class="plan-pay" data-plan="m1" data-amount="199" data-label="1 Month" id="payNowM1" href="upi://pay?pa=sonu77370725%40axl&pn=GMAX%20Hub&am=199&cu=INR&tn=GMAX%20-%201%20Month" rel="noopener">
-            <span class="plan-pay-ic">💸</span>
-            <span class="plan-pay-tx"><b>Pay Now · ₹199</b><i>Tap to open your UPI app</i></span>
-            <span class="plan-pay-go">→</span>
-          </a>
 
-          <button type="button" class="plan-btn" data-plan="m2" data-amount="299" data-label="2 Months">
-            <span><div>2 Months Access</div><div class="plan-tag">Full feed · 60 days</div></span>
-            <span class="plan-price">₹299</span>
-          </button>
-          <a class="plan-pay" data-plan="m2" data-amount="299" data-label="2 Months" id="payNowM2" href="upi://pay?pa=sonu77370725%40axl&pn=GMAX%20Hub&am=299&cu=INR&tn=GMAX%20-%202%20Months" rel="noopener">
-            <span class="plan-pay-ic">💸</span>
-            <span class="plan-pay-tx"><b>Pay Now · ₹299</b><i>Tap to open your UPI app</i></span>
-            <span class="plan-pay-go">→</span>
-          </a>
+          <div class="active-plan-wrap buy-plan-card" data-plan="m1" data-amount="199" data-label="1 Month">
+            <div class="active-plan-badge">1 Month</div>
+            <div class="active-plan-card">
+              <div class="ap-kicker">1 MONTH</div>
+              <div class="ap-price">₹199<small>/ 30 days</small></div>
+              <div class="ap-remain">Full feed unlock</div>
+              <ul>
+                <li>Unlimited photos</li>
+                <li>Unlimited videos</li>
+                <li>Full feed — no 2-post lock</li>
+                <li>Stories unlocked</li>
+                <li>No daily limit</li>
+              </ul>
+              <button type="button" class="ap-active-btn js-pay-now" data-plan="m1" data-amount="199" data-label="1 Month">Pay Now · ₹199</button>
+            </div>
+          </div>
 
-          <button type="button" class="plan-btn" data-plan="m3" data-amount="399" data-label="3 Months">
-            <span><div>3 Months Access</div><div class="plan-tag">Full feed · 90 days</div></span>
-            <span class="plan-price">₹399</span>
-          </button>
-          <a class="plan-pay" data-plan="m3" data-amount="399" data-label="3 Months" id="payNowM3" href="upi://pay?pa=sonu77370725%40axl&pn=GMAX%20Hub&am=399&cu=INR&tn=GMAX%20-%203%20Months" rel="noopener">
-            <span class="plan-pay-ic">💸</span>
-            <span class="plan-pay-tx"><b>Pay Now · ₹399</b><i>Tap to open your UPI app</i></span>
-            <span class="plan-pay-go">→</span>
-          </a>
+          <div class="active-plan-wrap buy-plan-card" data-plan="m2" data-amount="299" data-label="2 Months">
+            <div class="active-plan-badge">2 Months</div>
+            <div class="active-plan-card">
+              <div class="ap-kicker">2 MONTHS</div>
+              <div class="ap-price">₹299<small>/ 60 days</small></div>
+              <div class="ap-remain">Full feed unlock</div>
+              <ul>
+                <li>Unlimited photos</li>
+                <li>Unlimited videos</li>
+                <li>Full feed — no 2-post lock</li>
+                <li>Stories unlocked</li>
+                <li>No daily limit</li>
+              </ul>
+              <button type="button" class="ap-active-btn js-pay-now" data-plan="m2" data-amount="299" data-label="2 Months">Pay Now · ₹299</button>
+            </div>
+          </div>
+
+          <div class="active-plan-wrap buy-plan-card" data-plan="m3" data-amount="399" data-label="3 Months">
+            <div class="active-plan-badge">3 Months</div>
+            <div class="active-plan-card">
+              <div class="ap-kicker">3 MONTHS</div>
+              <div class="ap-price">₹399<small>/ 90 days</small></div>
+              <div class="ap-remain">Full feed unlock</div>
+              <ul>
+                <li>Unlimited photos</li>
+                <li>Unlimited videos</li>
+                <li>Full feed — no 2-post lock</li>
+                <li>Stories unlocked</li>
+                <li>No daily limit</li>
+              </ul>
+              <button type="button" class="ap-active-btn js-pay-now" data-plan="m3" data-amount="399" data-label="3 Months">Pay Now · ₹399</button>
+            </div>
+          </div>
+
         </div>
 
-        <div class="pay-panel" id="payPanel" hidden>
+        <div class="pay-panel" id="payPanel" hidden data-manual-backup="1">
           <div class="pay-return-hint" id="payReturnHint" hidden>
             <span style="font-size:18px;line-height:1">✅</span>
             <span><b>Welcome back!</b> Your UPI app should have opened. Enter the 12-digit <b>UTR / UPI Ref No.</b> below and press <b>Submit</b> for instant approval.</span>
@@ -2798,6 +2826,121 @@
         if(b){ const t=b.textContent; b.textContent='Copied'; setTimeout(()=>b.textContent=t,1200); }
       }catch(e){ alert('UPI: '+UPI_ID); }
     });
+    // Flip this to true later to show UPI + UTR manual panel again
+    window.ENABLE_MANUAL_UPI = false;
+
+    function applyManualPayMode(){
+      const panel = document.getElementById('payPanel');
+      if(!panel) return;
+      if(!window.ENABLE_MANUAL_UPI){
+        panel.hidden = true;
+        panel.style.display = 'none';
+      } else {
+        panel.style.display = '';
+      }
+    }
+    applyManualPayMode();
+
+    window.startRazorpayForPlan = async function(plan, amount, label, triggerBtn){
+      const msg = document.getElementById('payFormMsg');
+      const name = (document.getElementById('payName')?.value||'').trim() || 'Customer';
+      const email = (document.getElementById('payEmail')?.value||'').trim() || ('user@'+(window.GMAX_PROFILE||'gmax')+'.app');
+      const mobile = (document.getElementById('payMobile')?.value||'').trim() || '9999999999';
+      const planLabel = label || (PLAN_MAP[plan]&&PLAN_MAP[plan].label) || plan;
+      if(typeof Razorpay === 'undefined'){
+        alert('Payment system loading. Please refresh.');
+        return;
+      }
+      if(triggerBtn) triggerBtn.disabled = true;
+      try{
+        const res = await fetch('/api/create-order', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            name, email, mobile,
+            plan: planLabel,
+            amount: amount,
+            deviceId: (typeof getDeviceId === 'function' ? getDeviceId() : ''),
+            profileId: window.GMAX_PROFILE || 'gmax'
+          })
+        });
+        const d = await res.json().catch(()=>({ok:false}));
+        if(!d.ok){
+          alert(d.error || 'Could not start payment');
+          if(triggerBtn) triggerBtn.disabled = false;
+          return;
+        }
+        const options = {
+          key: d.keyId,
+          amount: d.amount,
+          currency: d.currency || 'INR',
+          name: 'GMAX Hub',
+          description: planLabel + ' · ' + (window.GMAX_PROFILE || 'gmax'),
+          order_id: d.orderId,
+          prefill: { name: name, email: email, contact: mobile },
+          theme: { color: '#d4a017' },
+          handler: async function (response){
+            try{
+              const vr = await fetch('/api/verify-payment', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  localId: d.localId
+                })
+              });
+              const vd = await vr.json().catch(()=>({ok:false}));
+              if(vd.ok && vd.until){
+                try{
+                  if(vd.plan) saveActivePlan(vd.plan, vd.until);
+                  setUntil(vd.until);
+                  applyUnlockState();
+                }catch(e){}
+                alert('Payment successful. Access is active.');
+                try{ closeSubscribePage(); }catch(e){}
+              } else {
+                alert((vd && vd.error) || 'Verify failed');
+              }
+            }catch(e){
+              alert('Verify network error');
+            }
+            if(triggerBtn) triggerBtn.disabled = false;
+          },
+          modal: {
+            ondismiss: function(){
+              if(triggerBtn) triggerBtn.disabled = false;
+            }
+          }
+        };
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function(){
+          alert('Payment failed. Please try again.');
+          if(triggerBtn) triggerBtn.disabled = false;
+        });
+        rzp.open();
+      }catch(e){
+        alert('Network error');
+        if(triggerBtn) triggerBtn.disabled = false;
+      }
+    };
+
+    document.querySelectorAll('.js-pay-now').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        try{ playClickSound(); }catch(e){}
+        const plan = btn.getAttribute('data-plan') || 'm1';
+        const amount = btn.getAttribute('data-amount') || '199';
+        const label = btn.getAttribute('data-label') || '1 Month';
+        const hp = document.getElementById('payPlan');
+        const ha = document.getElementById('payAmount');
+        if(hp) hp.value = plan;
+        if(ha) ha.value = amount;
+        window.startRazorpayForPlan(plan, amount, label, btn);
+      });
+    });
+
     document.querySelectorAll('.plan-btn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         document.querySelectorAll('.plan-btn').forEach(b=>b.classList.remove('active'));
@@ -2805,16 +2948,20 @@
         const plan = btn.getAttribute('data-plan');
         const amount = btn.getAttribute('data-amount');
         const label = btn.getAttribute('data-label');
-        const panel = document.getElementById('payPanel');
-        if(panel) panel.hidden = false;
-        const title = document.getElementById('payPanelTitle');
-        if(title) title.textContent = 'Pay ₹'+amount+' · '+label;
         const hp = document.getElementById('payPlan');
         const ha = document.getElementById('payAmount');
         if(hp) hp.value = plan;
         if(ha) ha.value = amount;
         try{ playClickSound(); }catch(e){}
-        panel && panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        if(window.ENABLE_MANUAL_UPI){
+          const panel = document.getElementById('payPanel');
+          if(panel){ panel.hidden = false; panel.style.display = ''; }
+          const title = document.getElementById('payPanelTitle');
+          if(title) title.textContent = 'Pay ₹'+amount+' · '+label;
+          panel && panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        } else {
+          window.startRazorpayForPlan(plan, amount, label, btn);
+        }
       });
     });
     
