@@ -55,24 +55,46 @@ module.exports = async function handler(req, res) {
   }
 
   if (deviceId) {
-    // New profile-scoped key
+    // Profile-scoped access
     let rec = await redisGet('gmax:access:' + profileId + ':' + deviceId).catch(() => null);
 
-    // Backward compat: old global access only counts for gmax
+    // Backward compat: old global access only for gmax
     if ((!rec || !rec.until) && profileId === 'gmax') {
       rec = await redisGet('gmax:access:' + deviceId).catch(() => null);
     }
 
-    if (!rec || !rec.until || rec.until < Date.now()) {
-      return res.status(200).json({ ok: true, status: 'none', until: 0, profileId: profileId });
+    if (rec && rec.until && rec.until > Date.now()) {
+      return res.status(200).json({
+        ok: true,
+        status: 'approved',
+        until: rec.until,
+        plan: rec.plan || null,
+        profileId: profileId
+      });
     }
-    return res.status(200).json({
-      ok: true,
-      status: 'approved',
-      until: rec.until,
-      plan: rec.plan || null,
-      profileId: profileId
-    });
+
+    // Pending payment-link flow
+    const pend = await redisGet('gmax:plink_device:' + profileId + ':' + deviceId).catch(() => null);
+    if (pend && pend.status === 'approved' && pend.until && pend.until > Date.now()) {
+      return res.status(200).json({
+        ok: true,
+        status: 'approved',
+        until: pend.until,
+        plan: pend.plan || null,
+        profileId: profileId
+      });
+    }
+    if (pend && pend.status === 'pending') {
+      return res.status(200).json({
+        ok: true,
+        status: 'pending',
+        until: 0,
+        plan: pend.plan || null,
+        profileId: profileId
+      });
+    }
+
+    return res.status(200).json({ ok: true, status: 'none', until: 0, profileId: profileId });
   }
 
   return res.status(400).json({ ok: false, error: 'id or deviceId required' });
