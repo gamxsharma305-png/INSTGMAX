@@ -2637,7 +2637,7 @@
       const link = window.PAYMENT_LINKS[amt];
       if(!link){
         alert(amt === '1'
-          ? '₹1 test link missing. Razorpay Live mein ₹1 Payment Link banao aur index.html mein PAYMENT_LINKS[\'1\'] mein paste karo.'
+          ? '₹1 test link missing. Add PAYMENT_LINKS[1] in index.html'
           : 'Payment link missing for this plan');
         return;
       }
@@ -2655,14 +2655,69 @@
             amount: amt
           })
         }).catch(()=>({}));
-        // Open Razorpay Payment Link
         window.open(link, '_blank');
-        // Poll until webhook activates access
+
+        // Claim UI: payment must unlock THIS device only
+        let claimBox = document.getElementById('payClaimBox');
+        if(!claimBox){
+          claimBox = document.createElement('div');
+          claimBox.id = 'payClaimBox';
+          claimBox.style.cssText = 'margin:16px auto;max-width:400px;padding:16px;border:1px solid var(--line,#333);border-radius:14px;background:rgba(0,0,0,.25);text-align:left';
+          const host = document.getElementById('planBuyArea') || document.getElementById('screenSubscribe');
+          if(host) host.appendChild(claimBox);
+        }
+        claimBox.style.display = 'block';
+        claimBox.innerHTML =
+          '<div style="font-weight:800;margin-bottom:8px;color:var(--accent,#d4a017)">Payment step</div>' +
+          '<p style="font-size:13px;color:var(--muted,#aaa);line-height:1.45;margin:0 0 10px">1) Complete payment in the new tab.<br/>2) Copy <b>Payment ID</b> (pay_XXXX) from Razorpay success / SMS / email / app.<br/>3) Paste below and tap <b>Unlock my access</b> — only <b>this phone</b> will unlock.</p>' +
+          '<input id="claimPaymentId" type="text" placeholder="pay_XXXXXXXX" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--line,#444);background:rgba(0,0,0,.35);color:inherit;margin-bottom:10px" />' +
+          '<button type="button" class="btn btn-primary" id="btnClaimPayment" style="width:100%">Unlock my access</button>' +
+          '<p id="claimPayMsg" style="font-size:12px;color:var(--muted);margin:8px 0 0"></p>';
+
+        const doClaim = async ()=>{
+          const msg = document.getElementById('claimPayMsg');
+          const inp = document.getElementById('claimPaymentId');
+          const btn = document.getElementById('btnClaimPayment');
+          const paymentId = (inp && inp.value || '').trim();
+          if(!paymentId || paymentId.length < 6){
+            if(msg) msg.textContent = 'Enter Payment ID (pay_...)';
+            return;
+          }
+          if(btn) btn.disabled = true;
+          if(msg) msg.textContent = 'Checking payment…';
+          try{
+            const r = await fetch('/api/claim-payment', {
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ paymentId, deviceId, profileId })
+            });
+            const d = await r.json().catch(()=>({}));
+            if(d && d.ok && d.until){
+              try{
+                if(d.plan) saveActivePlan(d.plan, d.until);
+                setUntil(d.until);
+                applyUnlockState();
+              }catch(e){}
+              if(msg) msg.textContent = 'Access active on this device.';
+              if(triggerBtn) triggerBtn.disabled = false;
+              alert('Payment linked. Learning access is active on this device.');
+              try{ closeSubscribePage(); }catch(e){}
+            } else {
+              if(msg) msg.textContent = (d && d.error) || 'Not found yet — wait 15 sec after pay, try again';
+              if(btn) btn.disabled = false;
+            }
+          }catch(e){
+            if(msg) msg.textContent = 'Network error';
+            if(btn) btn.disabled = false;
+          }
+        };
+        document.getElementById('btnClaimPayment')?.addEventListener('click', doClaim);
+
+        // Also poll in case solo auto-match worked
         let tries = 0;
-        const maxTries = 90; // ~3 min if 2s
         const timer = setInterval(async ()=>{
           tries++;
-          if(tries > maxTries){
+          if(tries > 90){
             clearInterval(timer);
             if(triggerBtn) triggerBtn.disabled = false;
             return;
@@ -2678,7 +2733,6 @@
                 applyUnlockState();
               }catch(e){}
               if(triggerBtn) triggerBtn.disabled = false;
-              alert('Payment successful. Learning access is active.');
               try{ closeSubscribePage(); }catch(e){}
             }
           }catch(e){}
