@@ -106,6 +106,17 @@ async function redisRpop(key) {
   return typeof v === 'object' && v ? v : null;
 }
 
+async function redisLlen(key) {
+  const { url, token } = redisEnv();
+  if (!url || !token) return 0;
+  const r = await fetch(url + '/llen/' + encodeURIComponent(key), {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const j = await r.json().catch(() => ({}));
+  const n = parseInt(j.result, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
 async function redisIncr(key) {
   const { url, token } = redisEnv();
   if (!url || !token) return;
@@ -188,30 +199,83 @@ module.exports = async function handler(req, res) {
     if (seen) return res.status(200).json({ ok: true, duplicate: true });
   }
 
-  // Match pending user (FIFO by amount)
-  let pending = await redisRpop('gmax:plink_pending:' + amountRupees);
-  if (!pending || !pending.deviceId) {
-    // no pending — log only
+  const durationSec = durationSecFromAmount(amountRupees);
+  const planDefault = planLabelFromAmount(amountRupees);
+
+  // Always store as CLAIMABLE — correct user binds via /api/claim-payment
+  const claimRec = {
+    paymentId: paymentId,
+    linkId: linkId,
+    amount: amountRupees,
+    plan: planDefault,
+    durationSec: durationSec,
+    claimedBy: null,
+    at: new Date().toISOString()
+  };
+  try {
+    if (paymentId) {
+      await redisSet('gmax:rzp_claim:' + paymentId, claimRec, 30 * 24 * 60 * 60);
+      await redisSet('gmax:rzp_paid:' + paymentId, { at: Date.now(), amount: amountRupees }, 30 * 24 * 60 * 60);
+    }
+  } catch (_) {}
+
+  // Auto-unlock ONLY if exactly ONE pending for this amount (safe solo case).
+  // If 0 or 2+ pendings → do NOT guess; user must claim with Payment ID.
+  let pending = null;
+  let auto = false;
+  try {
+    const q = 'gmax:plink_pending:' + amountRupees;
+    const len = await redisLlen(q);
+    if (len === 1) {
+      pending = await redisRpop(q);
+      auto = !!(pending && pending.deviceId);
+    }
+  } catch (_) {}
+
+  if (!auto) {
     try {
       await redisSet(
         'gmax:rzp_unmatched:' + (paymentId || Date.now()),
-        { amountRupees, paymentId, linkId, at: new Date().toISOString() },
+        { amountRupees, paymentId, linkId, at: new Date().toISOString(), needClaim: true },
         7 * 24 * 60 * 60
       );
     } catch (_) {}
-    return res.status(200).json({ ok: true, unmatched: true, amountRupees });
+    // Telegram notify claim needed
+    if (BOT_TOKEN && CHAT_ID && paymentId) {
+      try {
+        await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text:
+              'Payment received (claim needed)\nRs ' +
+              amountRupees +
+              '\nPayment ID: ' +
+              paymentId +
+              '\nUser must enter this ID on site to unlock their device.'
+          })
+        });
+      } catch (_) {}
+    }
+    return res.status(200).json({
+      ok: true,
+      stored: true,
+      needClaim: true,
+      paymentId: paymentId,
+      amountRupees: amountRupees
+    });
   }
 
   const deviceId = String(pending.deviceId || '');
   const profileId = normalizeProfile(pending.profileId);
-  const plan = pending.plan || planLabelFromAmount(amountRupees);
-  const days = pending.days != null ? pending.days : planDaysFromAmount(amountRupees);
-  const durationSec =
+  const plan = pending.plan || planDefault;
+  const dur =
     pending.durationSec ||
-    durationSecFromAmount(amountRupees) ||
-    (days > 0 ? days * 24 * 60 * 60 : 20 * 60);
-  const until = Date.now() + durationSec * 1000;
-  const expSec = durationSec + 86400;
+    durationSec ||
+    30 * 24 * 60 * 60;
+  const until = Date.now() + dur * 1000;
+  const expSec = dur + 86400;
 
   try {
     await redisSet(
@@ -219,9 +283,8 @@ module.exports = async function handler(req, res) {
       {
         until,
         plan,
-        days,
         profileId,
-        method: 'payment_link',
+        method: 'payment_link_auto',
         paymentId,
         amount: amountRupees
       },
@@ -245,7 +308,17 @@ module.exports = async function handler(req, res) {
       expSec
     );
     if (paymentId) {
-      await redisSet('gmax:rzp_paid:' + paymentId, { deviceId, profileId, at: Date.now() }, 30 * 24 * 60 * 60);
+      await redisSet(
+        'gmax:rzp_claim:' + paymentId,
+        Object.assign({}, claimRec, {
+          claimedBy: deviceId,
+          profileId,
+          plan,
+          until,
+          claimedAt: new Date().toISOString()
+        }),
+        30 * 24 * 60 * 60
+      );
     }
     await redisIncr('gmax:stats:subs:' + profileId);
     await redisIncrBy('gmax:stats:revenue:' + profileId, amountRupees);
