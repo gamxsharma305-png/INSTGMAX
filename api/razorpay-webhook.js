@@ -173,20 +173,28 @@ module.exports = async function handler(req, res) {
   let paymentId = '';
   let linkId = '';
 
+  let notes = {};
+  let referenceId = '';
   if (eventName === 'payment_link.paid' || payload.payment_link) {
     const pl = (payload.payment_link && payload.payment_link.entity) || {};
     const pay = (payload.payment && payload.payment.entity) || {};
     amountPaise = parseInt(pl.amount_paid || pl.amount || pay.amount || 0, 10) || 0;
-    paymentId = String(pay.id || pl.id || '');
+    paymentId = String(pay.id || '');
     linkId = String(pl.id || '');
+    notes = pl.notes || pay.notes || {};
+    referenceId = String(pl.reference_id || '');
   } else if (eventName === 'payment.captured' || payload.payment) {
     const pay = (payload.payment && payload.payment.entity) || payload.payment || {};
     amountPaise = parseInt(pay.amount || 0, 10) || 0;
     paymentId = String(pay.id || '');
+    notes = pay.notes || {};
   } else {
-    // ignore other events
     return res.status(200).json({ ok: true, ignored: eventName || 'unknown' });
   }
+  if (typeof notes === 'string') {
+    try { notes = JSON.parse(notes); } catch (_) { notes = {}; }
+  }
+  notes = notes || {};
 
   const amountRupees = Math.round(amountPaise / 100);
   if (![1, 199, 299, 399].includes(amountRupees)) {
@@ -201,6 +209,214 @@ module.exports = async function handler(req, res) {
 
   const durationSec = durationSecFromAmount(amountRupees);
   const planDefault = planLabelFromAmount(amountRupees);
+
+  // ——— Preferred: unlock from Payment Link notes (correct device) ———
+  try {
+    let deviceId = String(notes.deviceId || '').trim();
+    let profileId = normalizeProfile(notes.profileId);
+    let plan = String(notes.plan || planDefault);
+    let localId = String(notes.localId || referenceId || '').trim();
+    let dur = durationSec;
+
+    if ((!deviceId || !localId) && referenceId) {
+      const ref = await redisGet('gmax:plink_ref:' + referenceId).catch(() => null);
+      if (ref) {
+        deviceId = deviceId || String(ref.deviceId || '');
+        profileId = normalizeProfile(ref.profileId || profileId);
+        plan = ref.plan || plan;
+        localId = ref.id || referenceId;
+        dur = ref.durationSec || dur;
+      }
+    }
+    if (!deviceId && linkId) {
+      const byLink = await redisGet('gmax:plink_id:' + linkId).catch(() => null);
+      if (byLink) {
+        deviceId = String(byLink.deviceId || '');
+        profileId = normalizeProfile(byLink.profileId || profileId);
+        plan = byLink.plan || plan;
+        dur = byLink.durationSec || dur;
+        localId = byLink.id || localId;
+      }
+    }
+
+    if (deviceId) {
+      const until = Date.now() + dur * 1000;
+      const expSec = dur + 86400;
+      await redisSet(
+        'gmax:access:' + profileId + ':' + deviceId,
+        {
+          until,
+          plan,
+          profileId,
+          method: 'payment_link_notes',
+          paymentId,
+          amount: amountRupees
+        },
+        expSec
+      );
+      await redisSet(
+        'gmax:plink_device:' + profileId + ':' + deviceId,
+        { status: 'approved', until, plan, paymentId, ts: Date.now() },
+        expSec
+      );
+      if (paymentId) {
+        await redisSet(
+          'gmax:rzp_claim:' + paymentId,
+          {
+            paymentId,
+            amount: amountRupees,
+            plan,
+            durationSec: dur,
+            claimedBy: deviceId,
+            profileId,
+            until,
+            at: new Date().toISOString()
+          },
+          30 * 24 * 60 * 60
+        );
+        await redisSet('gmax:rzp_paid:' + paymentId, { deviceId, profileId, at: Date.now() }, 30 * 24 * 60 * 60);
+      }
+      if (localId) {
+        await redisSet(
+          'gmax:pay:' + localId,
+          { id: localId, deviceId, profileId, plan, amount: amountRupees, status: 'approved', until, paymentId },
+          14 * 24 * 60 * 60
+        );
+      }
+      await redisIncr('gmax:stats:subs:' + profileId);
+      await redisIncrBy('gmax:stats:revenue:' + profileId, amountRupees);
+      if (BOT_TOKEN && CHAT_ID) {
+        try {
+          await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: CHAT_ID,
+              text:
+                'AUTO-UNLOCK (notes)\nProfile: ' +
+                profileId +
+                '\nPlan: ' +
+                plan +
+                ' Rs ' +
+                amountRupees +
+                '\nDevice: ' +
+                deviceId +
+                '\nPayment: ' +
+                paymentId
+            })
+          });
+        } catch (_) {}
+      }
+      return res.status(200).json({
+        ok: true,
+        activated: true,
+        method: 'notes',
+        profileId,
+        deviceId,
+        until
+      });
+    }
+  } catch (_) {}
+
+
+  // ——— Payment Page: match by email / mobile (no API keys needed) ———
+  try {
+    let payEntity = {};
+    if (payload.payment && payload.payment.entity) payEntity = payload.payment.entity;
+    else if (payload.payment) payEntity = payload.payment;
+    const email = String(
+      (payEntity.email || (payEntity.customer && payEntity.customer.email) || notes.email || '')
+    )
+      .trim()
+      .toLowerCase();
+    let mobile = String(
+      payEntity.contact ||
+        (payEntity.customer && payEntity.customer.contact) ||
+        notes.mobile ||
+        ''
+    ).replace(/\D/g, '');
+    if (mobile.length > 10) mobile = mobile.slice(-10);
+
+    let pending = null;
+    if (email) pending = await redisGet('gmax:pending_email:' + email).catch(() => null);
+    if ((!pending || !pending.deviceId) && mobile.length === 10) {
+      pending = await redisGet('gmax:pending_mobile:' + mobile).catch(() => null);
+    }
+
+    if (pending && pending.deviceId) {
+      const deviceId = String(pending.deviceId || '');
+      const profileId = normalizeProfile(pending.profileId);
+      const plan = pending.plan || planDefault;
+      const dur = pending.durationSec || durationSec;
+      const until = Date.now() + dur * 1000;
+      const expSec = dur + 86400;
+      await redisSet(
+        'gmax:access:' + profileId + ':' + deviceId,
+        {
+          until,
+          plan,
+          profileId,
+          method: 'payment_page_email',
+          paymentId,
+          amount: amountRupees
+        },
+        expSec
+      );
+      await redisSet(
+        'gmax:plink_device:' + profileId + ':' + deviceId,
+        { status: 'approved', until, plan, paymentId, ts: Date.now() },
+        expSec
+      );
+      if (paymentId) {
+        await redisSet(
+          'gmax:rzp_claim:' + paymentId,
+          {
+            paymentId,
+            amount: amountRupees,
+            plan,
+            durationSec: dur,
+            claimedBy: deviceId,
+            profileId,
+            until,
+            at: new Date().toISOString()
+          },
+          30 * 24 * 60 * 60
+        );
+      }
+      await redisIncr('gmax:stats:subs:' + profileId);
+      await redisIncrBy('gmax:stats:revenue:' + profileId, amountRupees);
+      if (BOT_TOKEN && CHAT_ID) {
+        try {
+          await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: CHAT_ID,
+              text:
+                'AUTO-UNLOCK (email/mobile)\\n' +
+                profileId +
+                ' · ' +
+                plan +
+                ' · Rs ' +
+                amountRupees +
+                '\\nDevice: ' +
+                deviceId +
+                '\\n' +
+                (email || mobile)
+            })
+          });
+        } catch (_) {}
+      }
+      return res.status(200).json({
+        ok: true,
+        activated: true,
+        method: 'email_mobile',
+        profileId,
+        deviceId,
+        until
+      });
+    }
+  } catch (_) {}
 
   // Always store as CLAIMABLE — correct user binds via /api/claim-payment
   const claimRec = {
