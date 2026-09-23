@@ -951,6 +951,20 @@
             </div>
           </div>
         </div>
+        
+        <div id="payClaimBox" style="margin:18px auto 12px;max-width:400px;padding:16px;border:1px solid var(--line,#333);border-radius:14px;background:rgba(212,160,23,.08);text-align:left">
+          <div style="font-weight:800;margin-bottom:8px;color:var(--accent,#d4a017)">Already paid? Unlock here</div>
+          <p style="font-size:13px;color:var(--muted,#aaa);line-height:1.45;margin:0 0 10px">
+            <b>Do not pay again.</b><br/>
+            1) Razorpay success / SMS / email / app se <b>Payment ID</b> copy karo (<code>pay_XXXX</code>)<br/>
+            2) Neeche paste karo<br/>
+            3) <b>Unlock my access</b> dabao — isi phone par unlock hoga
+          </p>
+          <input id="claimPaymentId" type="text" placeholder="pay_XXXXXXXX" autocomplete="off"
+            style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--line,#444);background:rgba(0,0,0,.35);color:inherit;margin-bottom:10px;box-sizing:border-box"/>
+          <button type="button" class="btn btn-primary" id="btnClaimPayment" style="width:100%">Unlock my access</button>
+          <p id="claimPayMsg" style="font-size:12px;color:var(--muted);margin:8px 0 0"></p>
+        </div>
         <div class="pay-panel" id="payPanel" hidden data-manual-backup="1">
           <div class="pay-return-hint" id="payReturnHint" hidden>
             <span style="font-size:18px;line-height:1">✅</span>
@@ -2625,6 +2639,51 @@
       }
     }
     applyManualPayMode();
+
+    function bindClaimPaymentBtn(){
+      const btn = document.getElementById('btnClaimPayment');
+      if(!btn || btn.dataset.bound === '1') return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', async ()=>{
+        const msg = document.getElementById('claimPayMsg');
+        const inp = document.getElementById('claimPaymentId');
+        const paymentId = (inp && inp.value || '').trim();
+        const deviceId = (typeof getDeviceId === 'function' ? getDeviceId() : '');
+        const profileId = window.GMAX_PROFILE || 'gmax';
+        if(!paymentId || paymentId.length < 6){
+          if(msg) msg.textContent = 'Payment ID dalo (pay_ se start)';
+          return;
+        }
+        btn.disabled = true;
+        if(msg) msg.textContent = 'Checking…';
+        try{
+          const r = await fetch('/api/claim-payment', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ paymentId, deviceId, profileId })
+          });
+          const d = await r.json().catch(()=>({}));
+          if(d && d.ok && d.until){
+            try{
+              if(d.plan) saveActivePlan(d.plan, d.until);
+              setUntil(d.until);
+              applyUnlockState();
+            }catch(e){}
+            if(msg) msg.textContent = 'Access active on this device.';
+            alert('Unlock ho gaya is phone par.');
+            try{ closeSubscribePage(); }catch(e){}
+          } else {
+            if(msg) msg.textContent = (d && d.error) || 'Abhi nahi mila — 20 sec baad dubara try';
+            btn.disabled = false;
+          }
+        }catch(e){
+          if(msg) msg.textContent = 'Network error';
+          btn.disabled = false;
+        }
+      });
+    }
+    try{ bindClaimPaymentBtn(); }catch(e){}
+
     window.PAYMENT_LINKS = {
       '1': 'https://rzp.io/rzp/98ln16SG',
       '199': 'https://rzp.io/rzp/Hinf',
@@ -2657,61 +2716,16 @@
         }).catch(()=>({}));
         window.open(link, '_blank');
 
-        // Claim UI: payment must unlock THIS device only
-        let claimBox = document.getElementById('payClaimBox');
-        if(!claimBox){
-          claimBox = document.createElement('div');
-          claimBox.id = 'payClaimBox';
-          claimBox.style.cssText = 'margin:16px auto;max-width:400px;padding:16px;border:1px solid var(--line,#333);border-radius:14px;background:rgba(0,0,0,.25);text-align:left';
-          const host = document.getElementById('planBuyArea') || document.getElementById('screenSubscribe');
-          if(host) host.appendChild(claimBox);
-        }
-        claimBox.style.display = 'block';
-        claimBox.innerHTML =
-          '<div style="font-weight:800;margin-bottom:8px;color:var(--accent,#d4a017)">Payment step</div>' +
-          '<p style="font-size:13px;color:var(--muted,#aaa);line-height:1.45;margin:0 0 10px">1) Complete payment in the new tab.<br/>2) Copy <b>Payment ID</b> (pay_XXXX) from Razorpay success / SMS / email / app.<br/>3) Paste below and tap <b>Unlock my access</b> — only <b>this phone</b> will unlock.</p>' +
-          '<input id="claimPaymentId" type="text" placeholder="pay_XXXXXXXX" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--line,#444);background:rgba(0,0,0,.35);color:inherit;margin-bottom:10px" />' +
-          '<button type="button" class="btn btn-primary" id="btnClaimPayment" style="width:100%">Unlock my access</button>' +
-          '<p id="claimPayMsg" style="font-size:12px;color:var(--muted);margin:8px 0 0"></p>';
-
-        const doClaim = async ()=>{
-          const msg = document.getElementById('claimPayMsg');
-          const inp = document.getElementById('claimPaymentId');
-          const btn = document.getElementById('btnClaimPayment');
-          const paymentId = (inp && inp.value || '').trim();
-          if(!paymentId || paymentId.length < 6){
-            if(msg) msg.textContent = 'Enter Payment ID (pay_...)';
-            return;
+        // Scroll to permanent claim box — do NOT pay again
+        try{
+          const claimBox = document.getElementById('payClaimBox');
+          if(claimBox){
+            claimBox.scrollIntoView({ behavior:'smooth', block:'center' });
+            const msg = document.getElementById('claimPayMsg');
+            if(msg) msg.textContent = 'Payment tab khula. Pay complete ke baad Payment ID yahan dalo — dubara Pay Now mat dabao.';
           }
-          if(btn) btn.disabled = true;
-          if(msg) msg.textContent = 'Checking payment…';
-          try{
-            const r = await fetch('/api/claim-payment', {
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ paymentId, deviceId, profileId })
-            });
-            const d = await r.json().catch(()=>({}));
-            if(d && d.ok && d.until){
-              try{
-                if(d.plan) saveActivePlan(d.plan, d.until);
-                setUntil(d.until);
-                applyUnlockState();
-              }catch(e){}
-              if(msg) msg.textContent = 'Access active on this device.';
-              if(triggerBtn) triggerBtn.disabled = false;
-              alert('Payment linked. Learning access is active on this device.');
-              try{ closeSubscribePage(); }catch(e){}
-            } else {
-              if(msg) msg.textContent = (d && d.error) || 'Not found yet — wait 15 sec after pay, try again';
-              if(btn) btn.disabled = false;
-            }
-          }catch(e){
-            if(msg) msg.textContent = 'Network error';
-            if(btn) btn.disabled = false;
-          }
-        };
-        document.getElementById('btnClaimPayment')?.addEventListener('click', doClaim);
+          bindClaimPaymentBtn();
+        }catch(e){}
 
         // Also poll in case solo auto-match worked
         let tries = 0;
