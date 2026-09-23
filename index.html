@@ -901,7 +901,6 @@
               <button type="button" class="ap-active-btn js-pay-now" data-plan="m0" data-amount="1" data-label="Test 20 min">Pay Now · ₹1 (Test)</button>
             </div>
           </div>
-
           <div class="active-plan-wrap buy-plan-card" data-plan="m1" data-amount="199" data-label="1 Month">
             <div class="active-plan-badge">1 Month</div>
             <div class="active-plan-card">
@@ -951,7 +950,14 @@
             </div>
           </div>
         </div>
-        
+        <div id="payContactBox" style="margin:18px auto 8px;max-width:400px;padding:16px;border:1px solid var(--line,#333);border-radius:14px;background:rgba(0,0,0,.2);text-align:left">
+          <div style="font-weight:800;margin-bottom:8px;color:var(--accent,#d4a017)">Before Pay Now</div>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">Yahi <b>email / mobile</b> Razorpay page par bhi daalna — tab auto unlock is phone par hoga. API key ki zarurat nahi.</p>
+          <label style="font-size:12px;color:var(--muted)">Email</label>
+          <input id="payEmailQuick" type="email" placeholder="you@email.com" style="width:100%;padding:10px;margin:4px 0 10px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:inherit;box-sizing:border-box"/>
+          <label style="font-size:12px;color:var(--muted)">Mobile (10 digit)</label>
+          <input id="payMobileQuick" type="tel" maxlength="10" placeholder="9876543210" style="width:100%;padding:10px;margin:4px 0 0;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:inherit;box-sizing:border-box"/>
+        </div>
         <div id="payClaimBox" style="margin:18px auto 12px;max-width:400px;padding:16px;border:1px solid var(--line,#333);border-radius:14px;background:rgba(212,160,23,.08);text-align:left">
           <div style="font-weight:800;margin-bottom:8px;color:var(--accent,#d4a017)">Already paid? Unlock here</div>
           <p style="font-size:13px;color:var(--muted,#aaa);line-height:1.45;margin:0 0 10px">
@@ -2639,7 +2645,6 @@
       }
     }
     applyManualPayMode();
-
     function bindClaimPaymentBtn(){
       const btn = document.getElementById('btnClaimPayment');
       if(!btn || btn.dataset.bound === '1') return;
@@ -2683,7 +2688,45 @@
       });
     }
     try{ bindClaimPaymentBtn(); }catch(e){}
-
+    // After Razorpay callback redirect → auto poll unlock
+    try{
+      const qs = new URLSearchParams(location.search);
+      const paid = qs.get('paid') === '1' || qs.get('razorpay_payment_link_status') === 'paid' || !!qs.get('razorpay_payment_id');
+      if(paid){
+        const deviceId = (typeof getDeviceId === 'function' ? getDeviceId() : '');
+        const profileId = qs.get('profile') || window.GMAX_PROFILE || 'gmax';
+        window.GMAX_PROFILE = profileId === 'edu' ? 'edu' : 'gmax';
+        let tries = 0;
+        const tmr = setInterval(async ()=>{
+          tries++;
+          if(tries > 45){ clearInterval(tmr); return; }
+          try{
+            const r = await fetch('/api/payment-status?deviceId=' + encodeURIComponent(deviceId) + '&profileId=' + encodeURIComponent(window.GMAX_PROFILE));
+            const d = await r.json();
+            if(d && d.status === 'approved' && d.until > Date.now()){
+              clearInterval(tmr);
+              try{
+                if(d.plan) saveActivePlan(d.plan, d.until);
+                setUntil(d.until);
+                applyUnlockState();
+              }catch(e){}
+              try{
+                const u = new URL(location.href);
+                u.searchParams.delete('paid');
+                u.searchParams.delete('ref');
+                u.searchParams.delete('razorpay_payment_id');
+                u.searchParams.delete('razorpay_payment_link_id');
+                u.searchParams.delete('razorpay_payment_link_reference_id');
+                u.searchParams.delete('razorpay_payment_link_status');
+                u.searchParams.delete('razorpay_signature');
+                history.replaceState({}, '', u.pathname + (u.search || ''));
+              }catch(e){}
+              alert('Payment successful. Access unlocked.');
+            }
+          }catch(e){}
+        }, 2000);
+      }
+    }catch(e){}
     window.PAYMENT_LINKS = {
       '1': 'https://rzp.io/rzp/98ln16SG',
       '199': 'https://rzp.io/rzp/Hinf',
@@ -2695,58 +2738,49 @@
       const amt = String(amount || '199').replace(/[^0-9]/g, '') || '199';
       const link = window.PAYMENT_LINKS[amt];
       if(!link){
-        alert(amt === '1'
-          ? '₹1 test link missing. Add PAYMENT_LINKS[1] in index.html'
-          : 'Payment link missing for this plan');
+        alert('Payment page link missing for this plan');
+        return;
+      }
+      const email = (document.getElementById('payEmailQuick')?.value||document.getElementById('payEmail')?.value||'').trim().toLowerCase();
+      const mobile = (document.getElementById('payMobileQuick')?.value||document.getElementById('payMobile')?.value||'').replace(/\D/g,'').slice(-10);
+      const name = (document.getElementById('payName')?.value||'').trim() || 'Student';
+      if(!email && mobile.length !== 10){
+        alert('Pehle Email ya 10-digit Mobile bharo (Razorpay page par bhi yahi use karna)');
+        try{ document.getElementById('payContactBox')?.scrollIntoView({behavior:'smooth'}); }catch(e){}
         return;
       }
       if(triggerBtn) triggerBtn.disabled = true;
       try{
         const deviceId = (typeof getDeviceId === 'function' ? getDeviceId() : '');
         const profileId = window.GMAX_PROFILE || 'gmax';
-        await fetch('/api/register-pending', {
+        const reg = await fetch('/api/register-pending', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            deviceId: deviceId,
-            profileId: profileId,
-            plan: planLabel,
-            amount: amt
+            deviceId, profileId, plan: planLabel, amount: amt, email, mobile, name
           })
-        }).catch(()=>({}));
-        window.open(link, '_blank');
-
-        // Scroll to permanent claim box — do NOT pay again
-        try{
-          const claimBox = document.getElementById('payClaimBox');
-          if(claimBox){
-            claimBox.scrollIntoView({ behavior:'smooth', block:'center' });
-            const msg = document.getElementById('claimPayMsg');
-            if(msg) msg.textContent = 'Payment tab khula. Pay complete ke baad Payment ID yahan dalo — dubara Pay Now mat dabao.';
-          }
-          bindClaimPaymentBtn();
-        }catch(e){}
-
-        // Also poll in case solo auto-match worked
+        });
+        const rd = await reg.json().catch(()=>({}));
+        if(rd && rd.ok === false){
+          alert(rd.error || 'Could not start');
+          if(triggerBtn) triggerBtn.disabled = false;
+          return;
+        }
+        // Payment Page (dashboard link) — no API keys
+        window.location.href = link;
+        // Poll if user returns via browser back / redirect
         let tries = 0;
         const timer = setInterval(async ()=>{
           tries++;
-          if(tries > 90){
-            clearInterval(timer);
-            if(triggerBtn) triggerBtn.disabled = false;
-            return;
-          }
+          if(tries > 90){ clearInterval(timer); if(triggerBtn) triggerBtn.disabled = false; return; }
           try{
             const r = await fetch('/api/payment-status?deviceId=' + encodeURIComponent(deviceId) + '&profileId=' + encodeURIComponent(profileId));
             const d = await r.json();
             if(d && d.status === 'approved' && d.until > Date.now()){
               clearInterval(timer);
-              try{
-                if(d.plan) saveActivePlan(d.plan, d.until);
-                setUntil(d.until);
-                applyUnlockState();
-              }catch(e){}
+              try{ if(d.plan) saveActivePlan(d.plan, d.until); setUntil(d.until); applyUnlockState(); }catch(e){}
               if(triggerBtn) triggerBtn.disabled = false;
+              alert('Payment successful. Access unlocked.');
               try{ closeSubscribePage(); }catch(e){}
             }
           }catch(e){}
