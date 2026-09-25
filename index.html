@@ -950,28 +950,7 @@
             </div>
           </div>
         </div>
-        <div id="payContactBox" style="margin:18px auto 8px;max-width:400px;padding:16px;border:1px solid var(--line,#333);border-radius:14px;background:rgba(0,0,0,.2);text-align:left">
-          <div style="font-weight:800;margin-bottom:8px;color:var(--accent,#d4a017)">Before Pay Now</div>
-          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">Yahi <b>email / mobile</b> Razorpay page par bhi daalna — tab auto unlock is phone par hoga. API key ki zarurat nahi.</p>
-          <label style="font-size:12px;color:var(--muted)">Email</label>
-          <input id="payEmailQuick" type="email" placeholder="you@email.com" style="width:100%;padding:10px;margin:4px 0 10px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:inherit;box-sizing:border-box"/>
-          <label style="font-size:12px;color:var(--muted)">Mobile (10 digit)</label>
-          <input id="payMobileQuick" type="tel" maxlength="10" placeholder="9876543210" style="width:100%;padding:10px;margin:4px 0 0;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:inherit;box-sizing:border-box"/>
-        </div>
-        <div id="payClaimBox" style="margin:18px auto 12px;max-width:400px;padding:16px;border:1px solid var(--line,#333);border-radius:14px;background:rgba(212,160,23,.08);text-align:left">
-          <div style="font-weight:800;margin-bottom:8px;color:var(--accent,#d4a017)">Already paid? Unlock here</div>
-          <p style="font-size:13px;color:var(--muted,#aaa);line-height:1.45;margin:0 0 10px">
-            <b>Do not pay again.</b><br/>
-            1) Razorpay success / SMS / email / app se <b>Payment ID</b> copy karo (<code>pay_XXXX</code>)<br/>
-            2) Neeche paste karo<br/>
-            3) <b>Unlock my access</b> dabao — isi phone par unlock hoga
-          </p>
-          <input id="claimPaymentId" type="text" placeholder="pay_XXXXXXXX" autocomplete="off"
-            style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--line,#444);background:rgba(0,0,0,.35);color:inherit;margin-bottom:10px;box-sizing:border-box"/>
-          <button type="button" class="btn btn-primary" id="btnClaimPayment" style="width:100%">Unlock my access</button>
-          <p id="claimPayMsg" style="font-size:12px;color:var(--muted);margin:8px 0 0"></p>
-        </div>
-        <div class="pay-panel" id="payPanel" hidden data-manual-backup="1">
+<div class="pay-panel" id="payPanel" hidden data-manual-backup="1">
           <div class="pay-return-hint" id="payReturnHint" hidden>
             <span style="font-size:18px;line-height:1">✅</span>
             <span><b>Welcome back!</b> Your UPI app should have opened. Enter the 12-digit <b>UTR / UPI Ref No.</b> below and press <b>Submit</b> for instant approval.</span>
@@ -1329,6 +1308,43 @@
     }catch(e){ return 'gmax'; }
   }
   window.GMAX_PROFILE = getProfileId();
+  // After Payment Page return: one status check if not already unlocked in localStorage
+  try{
+    const _until = (typeof getUntil === 'function') ? getUntil() : 0;
+    if(!_until || _until <= Date.now()){
+      const did = (typeof getDeviceId === 'function') ? getDeviceId() : '';
+      const pid = window.GMAX_PROFILE || 'gmax';
+      if(did){
+        let tries = 0;
+        const poll = async ()=>{
+          tries++;
+          try{
+            let d = null;
+            try{
+              const r = await fetch('/api/verify-subscription?deviceId=' + encodeURIComponent(did) + '&profileId=' + encodeURIComponent(pid));
+              d = await r.json();
+              if(d && d.active && d.expiryTime > Date.now()){
+                if(d.plan) saveActivePlan(d.plan, d.expiryTime);
+                setUntil(d.expiryTime);
+                applyUnlockState();
+                return;
+              }
+            }catch(e){}
+            const r2 = await fetch('/api/payment-status?deviceId=' + encodeURIComponent(did) + '&profileId=' + encodeURIComponent(pid));
+            const d2 = await r2.json();
+            if(d2 && d2.status === 'approved' && d2.until > Date.now()){
+              if(d2.plan) saveActivePlan(d2.plan, d2.until);
+              setUntil(d2.until);
+              applyUnlockState();
+              return;
+            }
+          }catch(e){}
+          if(tries < 20) setTimeout(poll, 2000);
+        };
+        setTimeout(poll, 1500);
+      }
+    }
+  }catch(e){}
   try{ localStorage.setItem('gmax_profile', window.GMAX_PROFILE); }catch(e){}
   try{
     const vk = 'gmax_view_tracked_' + window.GMAX_PROFILE + '_' + new Date().toISOString().slice(0,10);
@@ -2645,88 +2661,6 @@
       }
     }
     applyManualPayMode();
-    function bindClaimPaymentBtn(){
-      const btn = document.getElementById('btnClaimPayment');
-      if(!btn || btn.dataset.bound === '1') return;
-      btn.dataset.bound = '1';
-      btn.addEventListener('click', async ()=>{
-        const msg = document.getElementById('claimPayMsg');
-        const inp = document.getElementById('claimPaymentId');
-        const paymentId = (inp && inp.value || '').trim();
-        const deviceId = (typeof getDeviceId === 'function' ? getDeviceId() : '');
-        const profileId = window.GMAX_PROFILE || 'gmax';
-        if(!paymentId || paymentId.length < 6){
-          if(msg) msg.textContent = 'Payment ID dalo (pay_ se start)';
-          return;
-        }
-        btn.disabled = true;
-        if(msg) msg.textContent = 'Checking…';
-        try{
-          const r = await fetch('/api/claim-payment', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ paymentId, deviceId, profileId })
-          });
-          const d = await r.json().catch(()=>({}));
-          if(d && d.ok && d.until){
-            try{
-              if(d.plan) saveActivePlan(d.plan, d.until);
-              setUntil(d.until);
-              applyUnlockState();
-            }catch(e){}
-            if(msg) msg.textContent = 'Access active on this device.';
-            alert('Unlock ho gaya is phone par.');
-            try{ closeSubscribePage(); }catch(e){}
-          } else {
-            if(msg) msg.textContent = (d && d.error) || 'Abhi nahi mila — 20 sec baad dubara try';
-            btn.disabled = false;
-          }
-        }catch(e){
-          if(msg) msg.textContent = 'Network error';
-          btn.disabled = false;
-        }
-      });
-    }
-    try{ bindClaimPaymentBtn(); }catch(e){}
-    // After Razorpay callback redirect → auto poll unlock
-    try{
-      const qs = new URLSearchParams(location.search);
-      const paid = qs.get('paid') === '1' || qs.get('razorpay_payment_link_status') === 'paid' || !!qs.get('razorpay_payment_id');
-      if(paid){
-        const deviceId = (typeof getDeviceId === 'function' ? getDeviceId() : '');
-        const profileId = qs.get('profile') || window.GMAX_PROFILE || 'gmax';
-        window.GMAX_PROFILE = profileId === 'edu' ? 'edu' : 'gmax';
-        let tries = 0;
-        const tmr = setInterval(async ()=>{
-          tries++;
-          if(tries > 45){ clearInterval(tmr); return; }
-          try{
-            const r = await fetch('/api/payment-status?deviceId=' + encodeURIComponent(deviceId) + '&profileId=' + encodeURIComponent(window.GMAX_PROFILE));
-            const d = await r.json();
-            if(d && d.status === 'approved' && d.until > Date.now()){
-              clearInterval(tmr);
-              try{
-                if(d.plan) saveActivePlan(d.plan, d.until);
-                setUntil(d.until);
-                applyUnlockState();
-              }catch(e){}
-              try{
-                const u = new URL(location.href);
-                u.searchParams.delete('paid');
-                u.searchParams.delete('ref');
-                u.searchParams.delete('razorpay_payment_id');
-                u.searchParams.delete('razorpay_payment_link_id');
-                u.searchParams.delete('razorpay_payment_link_reference_id');
-                u.searchParams.delete('razorpay_payment_link_status');
-                u.searchParams.delete('razorpay_signature');
-                history.replaceState({}, '', u.pathname + (u.search || ''));
-              }catch(e){}
-              alert('Payment successful. Access unlocked.');
-            }
-          }catch(e){}
-        }, 2000);
-      }
-    }catch(e){}
     window.PAYMENT_LINKS = {
       '1': 'https://rzp.io/rzp/98ln16SG',
       '199': 'https://rzp.io/rzp/Hinf',
@@ -2736,57 +2670,25 @@
     window.startRazorpayForPlan = async function(plan, amount, label, triggerBtn){
       const planLabel = label || (PLAN_MAP[plan]&&PLAN_MAP[plan].label) || plan;
       const amt = String(amount || '199').replace(/[^0-9]/g, '') || '199';
-      const link = window.PAYMENT_LINKS[amt];
+      const link = (window.PAYMENT_LINKS && window.PAYMENT_LINKS[amt]) || '';
       if(!link){
-        alert('Payment page link missing for this plan');
+        alert('Payment page link missing for Rs ' + amt);
         return;
       }
-      const email = (document.getElementById('payEmailQuick')?.value||document.getElementById('payEmail')?.value||'').trim().toLowerCase();
-      const mobile = (document.getElementById('payMobileQuick')?.value||document.getElementById('payMobile')?.value||'').replace(/\D/g,'').slice(-10);
-      const name = (document.getElementById('payName')?.value||'').trim() || 'Student';
-      if(!email && mobile.length !== 10){
-        alert('Pehle Email ya 10-digit Mobile bharo (Razorpay page par bhi yahi use karna)');
-        try{ document.getElementById('payContactBox')?.scrollIntoView({behavior:'smooth'}); }catch(e){}
-        return;
-      }
+      const deviceId = (typeof getDeviceId === 'function' ? getDeviceId() : '');
+      const profileId = window.GMAX_PROFILE || 'gmax';
+      if(!deviceId){ alert('Device id missing'); return; }
       if(triggerBtn) triggerBtn.disabled = true;
       try{
-        const deviceId = (typeof getDeviceId === 'function' ? getDeviceId() : '');
-        const profileId = window.GMAX_PROFILE || 'gmax';
-        const reg = await fetch('/api/register-pending', {
+        await fetch('/api/register-pending', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            deviceId, profileId, plan: planLabel, amount: amt, email, mobile, name
-          })
+          body: JSON.stringify({ deviceId, profileId, plan: planLabel, amount: amt })
         });
-        const rd = await reg.json().catch(()=>({}));
-        if(rd && rd.ok === false){
-          alert(rd.error || 'Could not start');
-          if(triggerBtn) triggerBtn.disabled = false;
-          return;
-        }
-        // Payment Page (dashboard link) — no API keys
+        // Payment Page (dashboard) — no Live API keys
         window.location.href = link;
-        // Poll if user returns via browser back / redirect
-        let tries = 0;
-        const timer = setInterval(async ()=>{
-          tries++;
-          if(tries > 90){ clearInterval(timer); if(triggerBtn) triggerBtn.disabled = false; return; }
-          try{
-            const r = await fetch('/api/payment-status?deviceId=' + encodeURIComponent(deviceId) + '&profileId=' + encodeURIComponent(profileId));
-            const d = await r.json();
-            if(d && d.status === 'approved' && d.until > Date.now()){
-              clearInterval(timer);
-              try{ if(d.plan) saveActivePlan(d.plan, d.until); setUntil(d.until); applyUnlockState(); }catch(e){}
-              if(triggerBtn) triggerBtn.disabled = false;
-              alert('Payment successful. Access unlocked.');
-              try{ closeSubscribePage(); }catch(e){}
-            }
-          }catch(e){}
-        }, 2000);
       }catch(e){
-        alert('Could not start payment');
+        alert('Could not start');
         if(triggerBtn) triggerBtn.disabled = false;
       }
     };
