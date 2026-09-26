@@ -1,7 +1,7 @@
 /**
  * POST /api/register-pending
  * Body: { deviceId, profileId, plan, amount }
- * No email required — Payment Page + webhook (no Razorpay API keys).
+ * Stores ONLY latest pending per amount (overwrites) — no stale queue.
  */
 const crypto = require('crypto');
 
@@ -40,20 +40,15 @@ async function redisSet(key, value, expSeconds) {
   return r.ok;
 }
 
-async function redisLpush(key, value) {
+async function redisDel(key) {
   const { url, token } = redisEnv();
-  if (!url || !token) return false;
-  const path =
-    url +
-    '/lpush/' +
-    encodeURIComponent(key) +
-    '/' +
-    encodeURIComponent(JSON.stringify(value));
-  const r = await fetch(path, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  return r.ok;
+  if (!url || !token) return;
+  try {
+    await fetch(url + '/del/' + encodeURIComponent(key), {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+  } catch (_) {}
 }
 
 module.exports = async function handler(req, res) {
@@ -92,20 +87,23 @@ module.exports = async function handler(req, res) {
     amount,
     durationSec,
     status: 'pending',
+    ts: Date.now(),
     createdAt: new Date().toISOString()
   };
 
-  const ttl = 45 * 60; // 45 min
+  const ttl = 45 * 60;
   try {
-    await redisSet('gmax:pay:' + id, record, ttl);
+    // Single latest pending per amount (overwrite) — avoids old queue unlocking wrong phone
+    await redisSet('gmax:latest_pending:' + amount, record, ttl);
+    await redisSet('gmax:pending_device:' + deviceId, record, ttl);
     await redisSet(
       'gmax:plink_device:' + profileId + ':' + deviceId,
       { pendingId: id, amount, plan, status: 'pending', ts: Date.now() },
       ttl
     );
-    // latest pending for this device wins (overwrite amount queue head via device pointer)
-    await redisSet('gmax:pending_device:' + deviceId, record, ttl);
-    await redisLpush('gmax:plink_pending:' + amount, record);
+    await redisSet('gmax:pay:' + id, record, ttl);
+    // wipe old list queue so it cannot unlock random devices
+    await redisDel('gmax:plink_pending:' + amount);
   } catch (e) {
     return res.status(500).json({ ok: false, error: 'Redis save failed' });
   }
