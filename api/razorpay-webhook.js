@@ -1,15 +1,10 @@
 /**
  * POST /api/razorpay-webhook
- * Payment Page — no Razorpay API keys.
- *
- * NOTE: On Vercel the raw body is often already parsed, so HMAC signature
- * verification is unreliable. We accept events and rely on paymentId
- * de-duplication instead of hard-failing signature.
+ * Payment Page flow — no API keys.
+ * Unlocks gmax:latest_pending:{amount} device (set when user taps Pay Now).
  */
 const crypto = require('crypto');
 
-const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || '';
-const STRICT_SIG = String(process.env.RAZORPAY_WEBHOOK_STRICT || '') === '1';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 
@@ -77,26 +72,15 @@ async function redisSet(key, value, expSeconds) {
   return r.ok;
 }
 
-async function redisRpop(key) {
+async function redisDel(key) {
   const { url, token } = redisEnv();
-  if (!url || !token) return null;
-  const r = await fetch(url + '/rpop/' + encodeURIComponent(key), {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.result == null || j.result === '') return null;
-  let v = j.result;
-  for (let i = 0; i < 3; i++) {
-    if (typeof v === 'object' && v !== null) return v;
-    if (typeof v !== 'string') break;
-    try {
-      v = JSON.parse(v);
-    } catch (_) {
-      return null;
-    }
-  }
-  return typeof v === 'object' && v ? v : null;
+  if (!url || !token) return;
+  try {
+    await fetch(url + '/del/' + encodeURIComponent(key), {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+  } catch (_) {}
 }
 
 async function redisIncr(key) {
@@ -119,12 +103,6 @@ async function redisIncrBy(key, n) {
       headers: { Authorization: 'Bearer ' + token }
     });
   } catch (_) {}
-}
-
-function getRawBody(req) {
-  if (typeof req.body === 'string') return req.body;
-  if (req.body && typeof req.body === 'object') return JSON.stringify(req.body);
-  return '';
 }
 
 async function activateDevice(pending, amountRupees, paymentId) {
@@ -153,11 +131,6 @@ async function activateDevice(pending, amountRupees, paymentId) {
   );
   if (paymentId) {
     await redisSet(
-      'gmax:rzp_claim:' + paymentId,
-      Object.assign({}, rec, { claimedBy: deviceId, paymentId }),
-      30 * 24 * 60 * 60
-    );
-    await redisSet(
       'gmax:rzp_paid:' + paymentId,
       { deviceId, profileId, at: Date.now() },
       30 * 24 * 60 * 60
@@ -173,24 +146,14 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(200).send('OK');
 
-  const raw = getRawBody(req);
   let event = {};
   try {
-    event = typeof req.body === 'object' && req.body ? req.body : JSON.parse(raw || '{}');
+    event =
+      typeof req.body === 'object' && req.body
+        ? req.body
+        : JSON.parse(typeof req.body === 'string' ? req.body : '{}');
   } catch (_) {
     event = {};
-  }
-
-  // Signature: only hard-fail when STRICT mode is on (Vercel usually breaks HMAC)
-  if (WEBHOOK_SECRET && STRICT_SIG) {
-    const sig = String(req.headers['x-razorpay-signature'] || '');
-    const expected = crypto.createHmac('sha256', WEBHOOK_SECRET).update(raw).digest('hex');
-    if (!sig || sig !== expected) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Invalid signature (STRICT mode)'
-      });
-    }
   }
 
   const eventName = String(event.event || '');
@@ -198,14 +161,12 @@ module.exports = async function handler(req, res) {
 
   let amountPaise = 0;
   let paymentId = '';
-  let notes = {};
 
   if (eventName === 'payment_link.paid' || payload.payment_link) {
     const pl = (payload.payment_link && payload.payment_link.entity) || {};
     const pay = (payload.payment && payload.payment.entity) || {};
     amountPaise = parseInt(pl.amount_paid || pl.amount || pay.amount || 0, 10) || 0;
     paymentId = String(pay.id || '');
-    notes = pl.notes || pay.notes || {};
   } else if (
     eventName === 'payment.captured' ||
     eventName === 'payment.authorized' ||
@@ -214,22 +175,8 @@ module.exports = async function handler(req, res) {
     const pay = (payload.payment && payload.payment.entity) || payload.payment || {};
     amountPaise = parseInt(pay.amount || 0, 10) || 0;
     paymentId = String(pay.id || '');
-    notes = pay.notes || {};
-  } else if (!eventName && payload.payment) {
-    const pay = (payload.payment && payload.payment.entity) || payload.payment || {};
-    amountPaise = parseInt(pay.amount || 0, 10) || 0;
-    paymentId = String(pay.id || '');
-    notes = pay.notes || {};
   } else {
     return res.status(200).json({ ok: true, ignored: eventName || 'unknown' });
-  }
-
-  if (typeof notes === 'string') {
-    try {
-      notes = JSON.parse(notes);
-    } catch (_) {
-      notes = {};
-    }
   }
 
   const amountRupees = Math.round(amountPaise / 100);
@@ -239,63 +186,38 @@ module.exports = async function handler(req, res) {
 
   if (paymentId) {
     const seen = await redisGet('gmax:rzp_paid:' + paymentId).catch(() => null);
-    if (seen) return res.status(200).json({ ok: true, duplicate: true, deviceId: seen.deviceId });
-  }
-
-  const noteDevice = String((notes && (notes.device_id || notes.deviceId)) || '').trim();
-  if (noteDevice) {
-    const act = await activateDevice(
-      {
-        deviceId: noteDevice,
-        profileId: notes.profileId || 'gmax',
-        plan: notes.plan || planLabelFromAmount(amountRupees),
-        durationSec: durationSecFromAmount(amountRupees)
-      },
-      amountRupees,
-      paymentId
-    );
-    return res.status(200).json({ ok: true, activated: true, method: 'notes', ...act });
-  }
-
-  // One payment → one pending unlock
-  const q = 'gmax:plink_pending:' + amountRupees;
-  const pending = await redisRpop(q);
-  if (pending && pending.deviceId) {
-    const act = await activateDevice(pending, amountRupees, paymentId);
-    if (BOT_TOKEN && CHAT_ID) {
-      try {
-        await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: CHAT_ID,
-            text:
-              'UNLOCK OK\n' +
-              act.deviceId +
-              '\nRs ' +
-              amountRupees +
-              '\n' +
-              paymentId
-          })
-        });
-      } catch (_) {}
+    if (seen) {
+      return res.status(200).json({ ok: true, duplicate: true, deviceId: seen.deviceId });
     }
-    return res.status(200).json({ ok: true, activated: true, method: 'pending_queue', ...act });
   }
 
-  if (paymentId) {
-    await redisSet(
-      'gmax:rzp_claim:' + paymentId,
-      {
-        paymentId,
-        amount: amountRupees,
-        plan: planLabelFromAmount(amountRupees),
-        durationSec: durationSecFromAmount(amountRupees),
-        claimedBy: null,
-        at: new Date().toISOString()
-      },
-      7 * 24 * 60 * 60
-    );
+  // Unlock the device that last tapped Pay Now for this amount (within TTL)
+  const pending = await redisGet('gmax:latest_pending:' + amountRupees).catch(() => null);
+  if (pending && pending.deviceId) {
+    const age = Date.now() - (pending.ts || 0);
+    if (age < 45 * 60 * 1000) {
+      const act = await activateDevice(pending, amountRupees, paymentId);
+      await redisDel('gmax:latest_pending:' + amountRupees);
+      if (BOT_TOKEN && CHAT_ID) {
+        try {
+          await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: CHAT_ID,
+              text:
+                'UNLOCK OK\n' +
+                act.deviceId +
+                '\nRs ' +
+                amountRupees +
+                '\n' +
+                paymentId
+            })
+          });
+        } catch (_) {}
+      }
+      return res.status(200).json({ ok: true, activated: true, method: 'latest_pending', ...act });
+    }
   }
 
   if (BOT_TOKEN && CHAT_ID) {
@@ -306,11 +228,10 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           chat_id: CHAT_ID,
           text:
-            'Payment received but NO pending\nRs ' +
+            'Payment but no Pay Now pending\nRs ' +
             amountRupees +
             '\n' +
-            paymentId +
-            '\nUser must Pay Now on site first'
+            paymentId
         })
       });
     } catch (_) {}
@@ -320,6 +241,7 @@ module.exports = async function handler(req, res) {
     ok: true,
     noPending: true,
     paymentId,
-    amountRupees
+    amountRupees,
+    hint: 'Tap Pay Now on website first, then pay within 45 minutes'
   });
 };
