@@ -1308,40 +1308,31 @@
     }catch(e){ return 'gmax'; }
   }
   window.GMAX_PROFILE = getProfileId();
-  // After Payment Page return: one status check if not already unlocked in localStorage
+  // After Payment Page return: poll unlock up to ~2 min
   try{
+    let pendingPay = null;
+    try{ pendingPay = JSON.parse(localStorage.getItem('gmax_pay_pending')||'null'); }catch(e){}
     const _until = (typeof getUntil === 'function') ? getUntil() : 0;
-    if(!_until || _until <= Date.now()){
+    const needPoll = (!_until || _until <= Date.now()) || (pendingPay && pendingPay.ts && (Date.now()-pendingPay.ts) < 45*60*1000);
+    if(needPoll){
       const did = (typeof getDeviceId === 'function') ? getDeviceId() : '';
-      const pid = window.GMAX_PROFILE || 'gmax';
+      const pid = (pendingPay && pendingPay.profileId) || window.GMAX_PROFILE || 'gmax';
       if(did){
         let tries = 0;
         const poll = async ()=>{
           tries++;
           try{
-            let d = null;
-            try{
-              const r = await fetch('/api/verify-subscription?deviceId=' + encodeURIComponent(did) + '&profileId=' + encodeURIComponent(pid));
-              d = await r.json();
-              if(d && d.active && d.expiryTime > Date.now()){
-                if(d.plan) saveActivePlan(d.plan, d.expiryTime);
-                setUntil(d.expiryTime);
-                applyUnlockState();
-                return;
-              }
-            }catch(e){}
             const r2 = await fetch('/api/payment-status?deviceId=' + encodeURIComponent(did) + '&profileId=' + encodeURIComponent(pid));
             const d2 = await r2.json();
             if(d2 && d2.status === 'approved' && d2.until > Date.now()){
-              if(d2.plan) saveActivePlan(d2.plan, d2.until);
-              setUntil(d2.until);
-              applyUnlockState();
+              try{ if(d2.plan) saveActivePlan(d2.plan, d2.until); setUntil(d2.until); applyUnlockState(); }catch(e){}
+              try{ localStorage.removeItem('gmax_pay_pending'); }catch(e){}
               return;
             }
           }catch(e){}
-          if(tries < 20) setTimeout(poll, 2000);
+          if(tries < 40) setTimeout(poll, 3000);
         };
-        setTimeout(poll, 1500);
+        setTimeout(poll, 1000);
       }
     }
   }catch(e){}
@@ -2685,6 +2676,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ deviceId, profileId, plan: planLabel, amount: amt })
         });
+        try{
+          localStorage.setItem('gmax_pay_pending', JSON.stringify({
+            amount: amt, plan: planLabel, profileId: profileId, deviceId: deviceId, ts: Date.now()
+          }));
+        }catch(e){}
         // Payment Page (dashboard) — no Live API keys
         window.location.href = link;
       }catch(e){
