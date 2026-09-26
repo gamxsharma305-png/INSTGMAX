@@ -187,7 +187,11 @@ module.exports = async function handler(req, res) {
     const sig = String(req.headers['x-razorpay-signature'] || '');
     const expected = crypto.createHmac('sha256', WEBHOOK_SECRET).update(raw).digest('hex');
     if (!sig || sig !== expected) {
-      return res.status(400).json({ ok: false, error: 'Invalid signature' });
+      // Razorpay Dashboard secret must EXACTLY match Vercel RAZORPAY_WEBHOOK_SECRET
+      return res.status(400).json({
+        ok: false,
+        error: 'Invalid signature — fix RAZORPAY_WEBHOOK_SECRET in Vercel to match Razorpay webhook secret'
+      });
     }
   }
 
@@ -247,30 +251,43 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true, activated: true, method: 'notes', ...act });
   }
 
-  // Solo pending for this amount → unlock that device only
+  // One successful payment → unlock ONE pending (oldest in queue for this amount).
+  // User must click Pay Now on site before paying (creates pending).
   const q = 'gmax:plink_pending:' + amountRupees;
   const len = await redisLlen(q);
-  if (len === 1) {
-    const pending = await redisRpop(q);
-    if (pending && pending.deviceId) {
-      const act = await activateDevice(pending, amountRupees, paymentId);
-      if (BOT_TOKEN && CHAT_ID) {
-        try {
-          await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: CHAT_ID,
-              text: 'Payment Page unlock\n' + act.deviceId + '\nRs ' + amountRupees + '\n' + paymentId
-            })
-          });
-        } catch (_) {}
-      }
-      return res.status(200).json({ ok: true, activated: true, method: 'solo_pending', ...act });
+  const pending = await redisRpop(q);
+  if (pending && pending.deviceId) {
+    const act = await activateDevice(pending, amountRupees, paymentId);
+    if (BOT_TOKEN && CHAT_ID) {
+      try {
+        await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text:
+              'Payment Page unlock\n' +
+              act.deviceId +
+              '\nRs ' +
+              amountRupees +
+              '\n' +
+              paymentId +
+              '\nqueueLeft:' +
+              Math.max(0, len - 1)
+          })
+        });
+      } catch (_) {}
     }
+    return res.status(200).json({
+      ok: true,
+      activated: true,
+      method: 'pending_queue',
+      queueLeft: Math.max(0, len - 1),
+      ...act
+    });
   }
 
-  // Multiple pendings: do not guess wrong device — keep payment claimable
+  // No pending: user paid without Pay Now on site — store claimable
   if (paymentId) {
     await redisSet(
       'gmax:rzp_claim:' + paymentId,
@@ -288,9 +305,9 @@ module.exports = async function handler(req, res) {
 
   return res.status(200).json({
     ok: true,
-    needSoloOrClaim: true,
-    pendingCount: len,
+    noPending: true,
     paymentId,
-    amountRupees
+    amountRupees,
+    hint: 'User must tap Pay Now on website before paying'
   });
 };
