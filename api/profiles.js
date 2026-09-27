@@ -1,7 +1,9 @@
 /**
- * GET  /api/profiles              → list profiles + public names
- * GET  /api/profiles?stats=1&pin= → admin stats (needs ADMIN_PIN)
- * POST /api/profiles              → update display name { pin, profileId, name }
+ * GET  /api/profiles
+ * GET  /api/profiles?profileId=gmax&publicStats=1  → posts not here; subs + followers
+ * POST { action:'follow', profileId, deviceId }
+ * POST { action:'view', profileId }  (optional view counter)
+ * POST admin: { pin, profileId, name, tag }
  */
 const crypto = require('crypto');
 
@@ -18,6 +20,10 @@ function checkAdmin(pin) {
   const adminPin = process.env.ADMIN_PIN;
   if (!adminPin) return false;
   return hashPin(String(pin || '')) === hashPin(adminPin);
+}
+
+function normalizeProfile(id) {
+  return String(id || '').toLowerCase() === 'edu' ? 'edu' : 'gmax';
 }
 
 function redisEnv() {
@@ -38,18 +44,29 @@ async function redisGet(key) {
   for (let i = 0; i < 3; i++) {
     if (typeof v === 'object' && v !== null) return v;
     if (typeof v !== 'string') break;
-    try { v = JSON.parse(v); } catch (_) { return null; }
+    try {
+      v = JSON.parse(v);
+    } catch (_) {
+      return null;
+    }
   }
   return typeof v === 'object' && v ? v : null;
 }
 
-async function redisSet(key, value) {
+async function redisSet(key, value, expSeconds) {
   const { url, token } = redisEnv();
   if (!url || !token) return false;
-  const r = await fetch(
-    url + '/set/' + encodeURIComponent(key) + '/' + encodeURIComponent(JSON.stringify(value)),
-    { method: 'POST', headers: { Authorization: 'Bearer ' + token } }
-  );
+  let path =
+    url +
+    '/set/' +
+    encodeURIComponent(key) +
+    '/' +
+    encodeURIComponent(typeof value === 'string' ? value : JSON.stringify(value));
+  if (expSeconds) path += '?EX=' + expSeconds;
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token }
+  });
   return r.ok;
 }
 
@@ -57,6 +74,19 @@ async function redisGetNum(key) {
   const { url, token } = redisEnv();
   if (!url || !token) return 0;
   const r = await fetch(url + '/get/' + encodeURIComponent(key), {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const j = await r.json().catch(() => ({}));
+  if (j.result == null || j.result === '') return 0;
+  const n = parseInt(j.result, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function redisIncr(key) {
+  const { url, token } = redisEnv();
+  if (!url || !token) return 0;
+  const r = await fetch(url + '/incr/' + encodeURIComponent(key), {
+    method: 'POST',
     headers: { Authorization: 'Bearer ' + token }
   });
   const j = await r.json().catch(() => ({}));
@@ -90,10 +120,24 @@ module.exports = async function handler(req, res) {
     const stored = await redisGet('gmax:profiles:meta').catch(() => null);
     const profiles = mergeMeta(stored);
     const list = [profiles.gmax, profiles.edu];
+    const q = req.query || {};
+    const profileId = normalizeProfile(q.profileId);
 
-    const wantStats = String((req.query && req.query.stats) || '') === '1';
-    const pin = String((req.query && req.query.pin) || '');
+    const publicStats = String(q.publicStats || '') === '1' || String(q.stats) === 'public';
+    if (publicStats || q.profileId) {
+      const subs = await redisGetNum('gmax:stats:subs:' + profileId);
+      const followers = await redisGetNum('gmax:stats:followers:' + profileId);
+      return res.status(200).json({
+        ok: true,
+        profiles: list,
+        profileId,
+        subscribers: subs,
+        followers: followers
+      });
+    }
 
+    const wantStats = String(q.stats || '') === '1';
+    const pin = String(q.pin || '');
     if (wantStats) {
       if (!checkAdmin(pin)) {
         return res.status(401).json({ ok: false, error: 'Admin PIN required' });
@@ -102,10 +146,12 @@ module.exports = async function handler(req, res) {
       for (const id of ['gmax', 'edu']) {
         const subs = await redisGetNum('gmax:stats:subs:' + id);
         const views = await redisGetNum('gmax:stats:views:' + id);
+        const followers = await redisGetNum('gmax:stats:followers:' + id);
         stats[id] = {
           name: profiles[id].name,
           subscriptions: subs,
-          views: views
+          views: views,
+          followers: followers
         };
       }
       return res.status(200).json({ ok: true, profiles: list, stats: stats });
@@ -117,13 +163,59 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST') {
     let body = req.body;
     if (typeof body === 'string') {
-      try { body = JSON.parse(body); } catch (_) { body = {}; }
+      try {
+        body = JSON.parse(body);
+      } catch (_) {
+        body = {};
+      }
     }
     body = body || {};
+    const action = String(body.action || '').toLowerCase();
+
+    if (action === 'follow') {
+      const profileId = normalizeProfile(body.profileId);
+      const deviceId = String(body.deviceId || '').trim();
+      if (!deviceId) return res.status(400).json({ ok: false, error: 'deviceId required' });
+      const flagKey = 'gmax:followed:' + profileId + ':' + deviceId;
+      const already = await redisGet(flagKey).catch(() => null);
+      if (already) {
+        const followers = await redisGetNum('gmax:stats:followers:' + profileId);
+        return res.status(200).json({ ok: true, already: true, followers: followers });
+      }
+      await redisSet(flagKey, { at: Date.now() }, 365 * 24 * 60 * 60);
+      const followers = await redisIncr('gmax:stats:followers:' + profileId);
+      return res.status(200).json({ ok: true, followed: true, followers: followers });
+    }
+
+    if (action === 'view') {
+      const profileId = normalizeProfile(body.profileId);
+      const views = await redisIncr('gmax:stats:views:' + profileId);
+      return res.status(200).json({ ok: true, views: views });
+    }
+
+    if (action === 'like') {
+      const profileId = normalizeProfile(body.profileId);
+      const postId = String(body.postId || '').trim();
+      const deviceId = String(body.deviceId || '').trim();
+      if (!postId || !deviceId) {
+        return res.status(400).json({ ok: false, error: 'postId and deviceId required' });
+      }
+      const likeFlag = 'gmax:liked:' + profileId + ':' + postId + ':' + deviceId;
+      const already = await redisGet(likeFlag).catch(() => null);
+      if (already) {
+        const n = await redisGetNum('gmax:likes:' + profileId + ':' + postId);
+        return res.status(200).json({ ok: true, already: true, likes: n });
+      }
+      await redisSet(likeFlag, { at: Date.now() }, 365 * 24 * 60 * 60);
+      const likes = await redisIncr('gmax:likes:' + profileId + ':' + postId);
+      return res.status(200).json({ ok: true, liked: true, likes: likes });
+    }
+
+    // Admin rename
     if (!checkAdmin(body.pin)) {
       return res.status(401).json({ ok: false, error: 'Admin PIN required' });
     }
-    const profileId = String(body.profileId || '').toLowerCase() === 'edu' ? 'edu' : 'gmax';
+    const profileId = normalizeProfile(body.profileId);
     const name = String(body.name || '').trim();
     if (!name) return res.status(400).json({ ok: false, error: 'name required' });
 
