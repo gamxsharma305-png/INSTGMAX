@@ -159,6 +159,112 @@ function normalize(c, profileId) {
   };
 }
 
+const LOCKED_IMG =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="520">' +
+      '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0%" stop-color="#2a1840"/><stop offset="100%" stop-color="#12081C"/>' +
+      '</linearGradient></defs>' +
+      '<rect width="400" height="520" fill="url(#g)"/>' +
+      '<circle cx="200" cy="210" r="36" fill="none" stroke="#d4a017" stroke-width="3"/>' +
+      '<path d="M188 210 h24 M200 198 v24" stroke="#d4a017" stroke-width="3" stroke-linecap="round"/>' +
+      '<text x="200" y="290" text-anchor="middle" fill="#e8d5a3" font-size="18" font-family="system-ui,sans-serif">Locked</text>' +
+      '<text x="200" y="318" text-anchor="middle" fill="#8a7a9a" font-size="13" font-family="system-ui,sans-serif">Subscribe to unlock</text>' +
+      '</svg>'
+  );
+
+async function isDeviceUnlocked(deviceId, profileId) {
+  if (!deviceId) return false;
+  const pid = normalizeProfile(profileId);
+  const keys = [
+    'gmax:access:' + pid + ':' + deviceId,
+    'sub:' + deviceId,
+    'gmax:plink_device:' + pid + ':' + deviceId
+  ];
+  if (pid === 'gmax') keys.push('gmax:access:' + deviceId);
+  for (const key of keys) {
+    try {
+      const got = await redisGetKey(key);
+      const rec = got && got.data;
+      if (!rec || typeof rec !== 'object') continue;
+      const until = parseInt(rec.until || rec.expiryTime || 0, 10) || 0;
+      if (until > Date.now()) return true;
+      if (rec.status === 'approved' && until > Date.now()) return true;
+    } catch (_) {}
+  }
+  return false;
+}
+
+/** Strip real media URLs so locked clients never receive them */
+function redactContent(content, profileId) {
+  const c = normalize(content, profileId);
+  const posts = (c.posts || []).map((p, i) => ({
+    id: p.id || 'p' + i,
+    user: p.user ? String(p.user).slice(0, 40) : 'Member',
+    avatar: LOCKED_IMG,
+    place: '',
+    title: '',
+    caption: '',
+    media: LOCKED_IMG,
+    type: 'image',
+    likes: 0,
+    time: '',
+    gradient: p.gradient || 'linear-gradient(160deg,#5b2d8e,#1a0a2e)',
+    locked: true
+  }));
+  // Show 3 placeholder cards if feed empty so UI still looks like a feed
+  while (posts.length < 3) {
+    posts.push({
+      id: 'lock' + posts.length,
+      user: 'Member',
+      avatar: LOCKED_IMG,
+      place: '',
+      title: '',
+      caption: '',
+      media: LOCKED_IMG,
+      type: 'image',
+      likes: 0,
+      time: '',
+      gradient: 'linear-gradient(160deg,#5b2d8e,#1a0a2e)',
+      locked: true
+    });
+  }
+  const stories = (c.stories || []).slice(0, 5).map((s, i) => ({
+    id: s.id || 's' + i,
+    name: '• • •',
+    title: '',
+    body: '',
+    media: LOCKED_IMG,
+    locked: true
+  }));
+  if (!stories.length) {
+    stories.push({
+      id: 'slock0',
+      name: '• • •',
+      title: '',
+      body: '',
+      media: LOCKED_IMG,
+      locked: true
+    });
+  }
+  return {
+    posts: posts,
+    stories: stories,
+    about: c.about || [],
+    brand: {
+      name: c.brand && c.brand.name ? c.brand.name : 'GMAX Hub',
+      tag: c.brand && c.brand.tag ? c.brand.tag : '',
+      logo: '',
+      avatar: LOCKED_IMG
+    },
+    profileId: profileId,
+    updatedAt: c.updatedAt || null,
+    locked: true
+  };
+}
+
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method === 'OPTIONS') {
@@ -170,7 +276,14 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
-      const profileId = normalizeProfile(req.query && req.query.profileId);
+      const q = req.query || {};
+      const profileId = normalizeProfile(q.profileId);
+      const deviceId = String(q.deviceId || q.device_id || '').trim();
+      const pin = String(q.pin || '');
+      // Admin PIN can fetch full content (for admin panel)
+      const adminOk = pin && checkAdmin({ pin: pin });
+      const unlocked = adminOk || (await isDeviceUnlocked(deviceId, profileId));
+
       let got = await redisGetKey(contentKey(profileId));
 
       // Migrate: old single feed → gmax
@@ -179,28 +292,27 @@ module.exports = async function handler(req, res) {
         if (legacy.data) got = legacy;
       }
 
-      if (got.error && !got.data) {
+      let content;
+      if (got.error && !got.data) content = makeDefault(profileId);
+      else if (!got.data) content = makeDefault(profileId);
+      else content = normalize(got.data, profileId);
+
+      if (!unlocked) {
         return send(res, 200, {
           ok: true,
-          content: makeDefault(profileId),
-          source: 'default',
+          content: redactContent(content, profileId),
+          source: got.data ? 'redacted' : 'default',
           profileId: profileId,
-          warn: got.error
+          locked: true
         });
       }
-      if (!got.data) {
-        return send(res, 200, {
-          ok: true,
-          content: makeDefault(profileId),
-          source: 'empty',
-          profileId: profileId
-        });
-      }
+
       return send(res, 200, {
         ok: true,
-        content: normalize(got.data, profileId),
-        source: 'upstash',
-        profileId: profileId
+        content: content,
+        source: got.data ? 'upstash' : 'default',
+        profileId: profileId,
+        locked: false
       });
     }
 
