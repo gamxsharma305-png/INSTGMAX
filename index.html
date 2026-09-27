@@ -817,15 +817,16 @@
           <p id="monthPayMsg"></p>
           <p class="profile-bio" id="profileBio">Structured study notes, lessons & practice material.<br/>Join a membership to unlock full learning access.</p>
           <div class="profile-stats">
-            <span><b id="statPosts">0</b> lessons</span>
-            <span><b id="statFollowers">—</b> learners</span>
-            <span><b id="statSubs">—</b> members</span>
+            <span><b id="statPosts">0</b> posts</span>
+            <span><b id="statFollowers">0</b> followers</span>
+            <span><b id="statSubs">0</b> members</span>
           </div>
+          <button type="button" class="profile-sub-btn" id="btnFollow" style="margin-top:10px;background:transparent;border:1px solid var(--accent);color:var(--accent);box-shadow:none">Follow</button>
         </div>
         <div class="profile-section-tabs">
           <button type="button" class="active" data-sec="posts">
             <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
-            Lessons
+            Posts
           </button>
           <button type="button" data-sec="photos">
             <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5-9 9"/></svg>
@@ -861,6 +862,14 @@
     </section>
     <section class="screen" id="screenAbout">
       <div class="about-deck" id="aboutDeck"></div>
+      <div class="policy-footer" style="text-align:center;padding:20px 12px 100px;font-size:12px;color:#888;">
+        <a href="/terms.html" style="color:#aaa;margin:0 8px;text-decoration:none;">Terms</a>
+        <a href="/privacy.html" style="color:#aaa;margin:0 8px;text-decoration:none;">Privacy</a>
+        <a href="/shipping.html" style="color:#aaa;margin:0 8px;text-decoration:none;">Shipping</a>
+        <a href="/refund.html" style="color:#aaa;margin:0 8px;text-decoration:none;">Refunds</a>
+        <a href="/contact.html" style="color:#aaa;margin:0 8px;text-decoration:none;">Contact</a>
+        <button type="button" id="footerAdminBtn" style="background:none;border:0;color:#666;margin:0 8px;font-size:12px;cursor:pointer;padding:0;text-decoration:underline;">Admin</button>
+      </div>
     </section>
     <section class="screen" id="screenSubscribe">
       <div class="sub-page-top">
@@ -1221,9 +1230,9 @@
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 19c1.5-3.5 4-5 7-5s5.5 1.5 7 5"/></svg>
       <span>About</span>
     </button>
-    <button class="tab" data-tab="admin" type="button">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-      <span>Admin</span>
+        <button class="tab" data-tab="sub" type="button">
+      <svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a5 5 0 0 1 10 0v2"/><circle cx="12" cy="14" r="2"/></svg>
+      <span>Subscription</span>
     </button>
   </nav>
 </div>
@@ -1277,6 +1286,10 @@
   const ADMIN_KEY = 'lumina_admin_until';
   const ADMIN_PIN_CACHE = 'lumina_admin_pin_session'; // only in memory-ish session for publish
   let sharedPosts = [];
+  window.GMAX_FEED_SEC = 'posts';
+  const LOCKED_PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="520"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2a1840"/><stop offset="100%" stop-color="#12081C"/></linearGradient></defs><rect width="400" height="520" fill="url(#g)"/><circle cx="200" cy="210" r="36" fill="none" stroke="#d4a017" stroke-width="3"/><text x="200" y="290" text-anchor="middle" fill="#e8d5a3" font-size="18" font-family="system-ui,sans-serif">Locked</text><text x="200" y="318" text-anchor="middle" fill="#8a7a9a" font-size="13" font-family="system-ui,sans-serif">Subscribe to unlock</text></svg>'
+  );
   let sharedStories = [];
   let sharedAbout = DEFAULT_ABOUT.map(a => ({...a, bullets: [...(a.bullets||[])]}));
   let sharedBrand = { name:'GMAX Hub', tag:'Online learning · study membership', logo:'', avatar:'', bio:'Structured study notes, lessons & practice material.\nJoin a membership to unlock full learning access.' };
@@ -1405,10 +1418,14 @@
     }catch(e){ return false; }
   }
   function applyUnlockState(){
+    const wasLocked = feed.classList.contains('locked');
     const until = getUntil();
     const ok = until > Date.now();
     try{ updateActivePlanUI(); }catch(e){}
     feed.classList.toggle('locked', !ok);
+    if(wasLocked && ok){
+      try{ loadSharedContent(); }catch(e){}
+    }
     const sw = document.getElementById('storiesWrap');
     if(sw) sw.classList.toggle('locked', !ok);
     if(ok){
@@ -1445,7 +1462,13 @@
   function isVideoUrl(url){
     return /\.(mp4|webm|ogg)(\?|$)/i.test(url||'') || /\/video\//i.test(url||'');
   }
-  function mediaBlock(url, gradient, title){
+  function mediaBlock(url, gradient, title, forceLocked){
+    const locked = forceLocked || feed.classList.contains('locked') || !isUnlockedNow();
+    // Locked: never put real http(s) media URLs in the DOM
+    if(locked){
+      const ph = LOCKED_PLACEHOLDER;
+      return `<div class="post-media media-protect no-save"><img src="${ph}" alt="Locked" draggable="false"/></div>`;
+    }
     if(url){
       if(isVideoUrl(url)){
         const safe = url.replace(/"/g,'');
@@ -1564,6 +1587,50 @@
     }
     applyProfileUI();
   }
+  async function loadProfilePublicStats(){
+    try{
+      const pid = window.GMAX_PROFILE || 'gmax';
+      const r = await fetch('/api/profiles?profileId=' + encodeURIComponent(pid) + '&publicStats=1&t=' + Date.now(), {cache:'no-store'});
+      const d = await r.json().catch(()=>({}));
+      const sf = document.getElementById('statFollowers');
+      const ss = document.getElementById('statSubs');
+      if(sf && d.followers != null) sf.textContent = String(d.followers);
+      if(ss && d.subscribers != null) ss.textContent = String(d.subscribers);
+      // follow button state
+      const fb = document.getElementById('btnFollow');
+      if(fb){
+        try{
+          if(localStorage.getItem('gmax_followed_' + pid) === '1'){
+            fb.textContent = 'Following';
+            fb.disabled = true;
+            fb.style.opacity = '0.7';
+          }
+        }catch(e){}
+      }
+    }catch(e){}
+  }
+  document.getElementById('btnFollow')?.addEventListener('click', async ()=>{
+    const fb = document.getElementById('btnFollow');
+    const pid = window.GMAX_PROFILE || 'gmax';
+    try{
+      if(localStorage.getItem('gmax_followed_' + pid) === '1') return;
+    }catch(e){}
+    if(fb) fb.disabled = true;
+    try{
+      const r = await fetch('/api/profiles', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'follow', profileId: pid, deviceId: getDeviceId() })
+      });
+      const d = await r.json().catch(()=>({}));
+      if(d && d.ok){
+        try{ localStorage.setItem('gmax_followed_' + pid, '1'); }catch(e){}
+        if(fb){ fb.textContent = 'Following'; fb.style.opacity = '0.7'; }
+        const sf = document.getElementById('statFollowers');
+        if(sf && d.followers != null) sf.textContent = String(d.followers);
+      } else if(fb) fb.disabled = false;
+    }catch(e){ if(fb) fb.disabled = false; }
+  });
   function applyProfileUI(){
     const name = (sharedBrand && sharedBrand.name) || 'GMAX Hub';
     const avatar = (sharedBrand && sharedBrand.avatar) || '';
@@ -1672,15 +1739,17 @@
   function renderStories(){
     const seen = new Set(getSeen());
     const STORIES = allStories();
+    const locked = feed.classList.contains('locked') || !isUnlockedNow();
     storiesRow.innerHTML = '';
     STORIES.forEach((st, i)=>{
       const btn = document.createElement('button');
       btn.type='button';
       btn.className='story';
-      const av = st.media
-        ? `<img src="${String(st.media).replace(/"/g,'')}" alt="" draggable="false"/>`
+      const mediaUrl = locked ? LOCKED_PLACEHOLDER : st.media;
+      const av = mediaUrl
+        ? `<img src="${String(mediaUrl).replace(/"/g,'')}" alt="" draggable="false"/>`
         : `<div class="av">${(st.name||'L')[0]}</div>`;
-      btn.innerHTML = `<div class="ring ${seen.has(st.id)?'seen':''}"><div class="ring-inner">${av}</div></div><span>${st.name||'Story'}</span>`;
+      btn.innerHTML = `<div class="ring ${seen.has(st.id)?'seen':''}"><div class="ring-inner">${av}</div></div><span>${locked ? '• • •' : (st.name||'Story')}</span>`;
       btn.addEventListener('click', ()=> openStory(i));
       storiesRow.appendChild(btn);
     });
@@ -1689,22 +1758,46 @@
     if(sp) sp.textContent = String(allPosts().length);
     if(ss) ss.textContent = String(STORIES.length);
   }
+  function postIsVideo(p){
+    return !!(p && p.media && isVideoUrl(p.media));
+  }
+  function postIsPhoto(p){
+    if(!p || !p.media) return false;
+    if(postIsVideo(p)) return false;
+    return true;
+  }
+  function filteredPosts(){
+    const all = allPosts();
+    const sec = window.GMAX_FEED_SEC || 'posts';
+    if(sec === 'photos') return all.filter(postIsPhoto);
+    if(sec === 'videos') return all.filter(postIsVideo);
+    if(sec === 'products') return [];
+    return all;
+  }
   function renderPosts(){
-    const POSTS = allPosts();
+    const POSTS = filteredPosts();
     const locked = feed.classList.contains('locked') || !isUnlockedNow();
     postsEl.innerHTML = '';
-    // Locked: only first 2 posts as preview
     const list = locked ? POSTS.slice(0, 2) : POSTS;
+    if(!list.length){
+      const empty = document.createElement('div');
+      empty.style.cssText = 'text-align:center;padding:28px 16px;color:var(--muted);font-size:14px';
+      const sec = window.GMAX_FEED_SEC||'posts';
+      empty.textContent = sec==='products' ? 'No products yet' : (sec==='photos' ? 'No photos yet' : (sec==='videos' ? 'No videos yet' : 'No posts yet'));
+      postsEl.appendChild(empty);
+      return;
+    }
     list.forEach(p=>{
       const el = document.createElement('article');
       el.className='post';
       el.dataset.id = p.id;
+      const avSrc = locked ? LOCKED_PLACEHOLDER : (p.avatar||sharedBrand.avatar||'');
       el.innerHTML = `
         <div class="post-head">
-          <div class="post-av">${(p.avatar||sharedBrand.avatar) ? '<img src="'+String(p.avatar||sharedBrand.avatar).replace(/"/g,'')+'" alt="" draggable="false"/>' : (p.user||'G')[0].toUpperCase()}</div>
-          <div class="post-meta"><strong>${p.user||'gmax'}</strong><small>${p.place||''}</small></div>
+          <div class="post-av">${avSrc ? '<img src="'+String(avSrc).replace(/"/g,'')+'" alt="" draggable="false"/>' : (p.user||'G')[0].toUpperCase()}</div>
+          <div class="post-meta"><strong>${locked ? 'Member' : (p.user||'gmax')}</strong><small>${locked ? '' : (p.place||'')}</small></div>
         </div>
-        ${mediaBlock(p.media, p.gradient, p.title)}
+        ${mediaBlock(p.media, p.gradient, p.title, locked)}
         <div class="post-actions">
           <button class="act like" type="button" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-8.5C.5 9 2.5 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5c4 0 6 4 4 7.5C19 16.4 12 21 12 21z"/></svg></button>
           <button class="act share" type="button" aria-label="Share" style="margin-left:auto"><svg viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/></svg></button>
@@ -1713,12 +1806,32 @@
         <div class="caption"><strong>${p.user||''}</strong> ${p.caption||''}</div>
         <div class="time">${p.time||'JUST NOW'}</div>`;
       const likeBtn = el.querySelector('.like');
-      likeBtn.addEventListener('click', ()=>{
-        if(feed.classList.contains('locked')){ openUnlock(); return; }
-        likeBtn.classList.toggle('liked');
+      const likeKey = 'gmax_liked_' + (window.GMAX_PROFILE||'gmax') + '_' + (p.id||'');
+      try{
+        if(localStorage.getItem(likeKey) === '1') likeBtn.classList.add('liked');
+      }catch(e){}
+      likeBtn.addEventListener('click', async ()=>{
+        if(feed.classList.contains('locked') || !isUnlockedNow()){ openUnlock(); return; }
+        if(likeBtn.classList.contains('liked')) return; // one like only
+        likeBtn.classList.add('liked');
         const c = el.querySelector('.like-count');
         let n = parseInt(c.textContent,10)||0;
-        c.textContent = likeBtn.classList.contains('liked') ? n+1 : Math.max(0,n-1);
+        c.textContent = String(n+1);
+        try{ localStorage.setItem(likeKey, '1'); }catch(e){}
+        try{
+          const r = await fetch('/api/profiles', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              action:'like',
+              profileId: window.GMAX_PROFILE||'gmax',
+              postId: p.id,
+              deviceId: getDeviceId()
+            })
+          });
+          const d = await r.json().catch(()=>({}));
+          if(d && d.likes != null) c.textContent = String(d.likes);
+        }catch(e){}
       });
       el.querySelector('.share').addEventListener('click', async ()=>{
         const text = `GMAX · ${p.title||''}\n${p.caption||''}\n${location.href}`;
@@ -1798,7 +1911,8 @@
   async function loadSharedContent(){
     try{
       const pid = window.GMAX_PROFILE || 'gmax';
-      const r = await fetch('/api/content?profileId=' + encodeURIComponent(pid) + '&t=' + Date.now(), { cache:'no-store' });
+      const did = (typeof getDeviceId === 'function' ? getDeviceId() : '');
+      const r = await fetch('/api/content?profileId=' + encodeURIComponent(pid) + '&deviceId=' + encodeURIComponent(did) + '&t=' + Date.now(), { cache:'no-store' });
       const d = await r.json();
       if(d && d.ok && d.content){
         contentFromServer = true;
@@ -1832,6 +1946,10 @@
   let storyIndex = 0, storyTimer = null;
   const viewer = document.getElementById('storyViewer');
   function openStory(i){
+    if(feed.classList.contains('locked') || !isUnlockedNow()){
+      try{ openUnlock(); }catch(e){}
+      return;
+    }
     storyIndex = i;
     viewer.classList.add('show');
     showStoryFrame();
@@ -1840,6 +1958,11 @@
     const STORIES = allStories();
     const st = STORIES[storyIndex];
     if(!st){ closeStory(); return; }
+    if(feed.classList.contains('locked') || !isUnlockedNow()){
+      closeStory();
+      try{ openUnlock(); }catch(e){}
+      return;
+    }
     markSeen(st.id);
     renderStories();
     const prog = document.getElementById('viewerProgress');
@@ -1847,7 +1970,8 @@
     document.getElementById('viewerName').textContent = st.name||'GMAX';
     document.getElementById('viewerAv').textContent = (st.name||'L')[0];
     let body = `<h3>${st.title||''}</h3><p>${st.body||''}</p>`;
-    if(st.media){
+    // only real media when unlocked (server already redacts when locked)
+    if(st.media && !String(st.media).startsWith('data:') && /^https?:/i.test(String(st.media))){
       body = `<div class="no-save media-protect" style="margin-bottom:12px;border-radius:12px;overflow:hidden">
         <img src="${String(st.media).replace(/"/g,'')}" alt="" draggable="false" style="width:100%;max-height:240px;object-fit:cover"/></div>` + body;
     }
@@ -1906,6 +2030,15 @@
     ind.style.width = btnRect.width + 'px';
     ind.style.left = (btnRect.left - barRect.left) + 'px';
   }
+  function openAdminFromFooter(){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const el = document.getElementById('screenAdmin');
+    if(el) el.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    try{ showAdmin(); }catch(e){}
+    try{ playClickSound(); }catch(e){}
+  }
+  document.getElementById('footerAdminBtn')?.addEventListener('click', openAdminFromFooter);
   document.querySelectorAll('.tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -1914,10 +2047,21 @@
       moveTabIndicator(tab);
       const name = tab.getAttribute('data-tab');
       document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-      const map = { home:'screenHome', about:'screenAbout', admin:'screenAdmin' };
+      const map = { home:'screenHome', about:'screenAbout', sub:'screenSubscribe' };
       const el = document.getElementById(map[name]);
       if(el) el.classList.add('active');
-      if(name==='admin') showAdmin();
+      if(name==='sub'){
+        try{ updateActivePlanUI(); }catch(e){}
+        try{
+          const back = document.getElementById('btnSubBack');
+          if(back) back.style.display = 'none';
+        }catch(e){}
+      } else {
+        try{
+          const back = document.getElementById('btnSubBack');
+          if(back) back.style.display = '';
+        }catch(e){}
+      }
     });
   });
   window.addEventListener('load', ()=> moveTabIndicator(document.querySelector('.tab.active')));
@@ -2275,8 +2419,9 @@
         err.textContent = 'Published OK · posts=' + pc + ' stories=' + sc + ' · refresh your other phone';
         // verify round-trip
         const pid = (document.getElementById('adminProfileSelect')&&document.getElementById('adminProfileSelect').value) || window.GMAX_PROFILE || 'gmax';
-        return fetch('/api/content?profileId=' + encodeURIComponent(pid) + '&t=' + Date.now(), {cache:'no-store'}).then(r2=>r2.json()).then(d2=>{
-          if(d2 && d2.content){
+        const pinQ = encodeURIComponent(adminPinSession || '');
+        return fetch('/api/content?profileId=' + encodeURIComponent(pid) + '&pin=' + pinQ + '&t=' + Date.now(), {cache:'no-store'}).then(r2=>r2.json()).then(d2=>{
+          if(d2 && d2.content && d2.locked !== true){
             const p2 = (d2.content.posts||[]).length;
             err.textContent = 'Server confirm · posts=' + p2 + ' stories=' + (d2.content.stories||[]).length + ' · profile=' + pid;
             contentFromServer = true;
@@ -2326,7 +2471,9 @@
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('.profile-section-tabs button').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      playClickSound && playClickSound();
+      window.GMAX_FEED_SEC = btn.getAttribute('data-sec') || 'posts';
+      try{ playClickSound(); }catch(e){}
+      try{ renderPosts(); }catch(e){}
     });
   });
   async function loadUnlockStats(){
@@ -2538,6 +2685,10 @@
     const el = document.getElementById('screenSubscribe');
     if(el) el.classList.add('active');
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    const subTab = document.querySelector('.tab[data-tab="sub"]');
+    if(subTab){ subTab.classList.add('active'); try{ moveTabIndicator(subTab); }catch(e){} }
+    try{ const back = document.getElementById('btnSubBack'); if(back) back.style.display = ''; }catch(e){}
+    try{ updateActivePlanUI(); }catch(e){}
     try{ playClickSound(); }catch(e){}
     window.scrollTo(0,0);
     // If payment pending, show waiting inside panel again
