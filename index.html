@@ -3050,5 +3050,30 @@
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+
+<!-- Ad network: pop-under — every page load, after UI is ready -->
+<script>
+(function(){
+  function loadAd(){
+    if(window.__gmaxAdLoaded) return;
+    window.__gmaxAdLoaded = true;
+    try{
+      var s = document.createElement('script');
+      s.src = 'https://pl31581295.profitableratecpmnetwork.com/78/a9/7e/78a97e840b81ecc945f4ecaeeb0f82f4.js';
+      s.async = true;
+      s.defer = true;
+      s.setAttribute('data-cfasync', 'false');
+      document.body.appendChild(s);
+    }catch(e){}
+  }
+  // Wait until page interactive so first taps (tabs/buttons) are not stolen/laggy
+  if(document.readyState === 'complete'){
+    setTimeout(loadAd, 4000);
+  } else {
+    window.addEventListener('load', function(){ setTimeout(loadAd, 4000); });
+  }
+})();
+</script>
+
 </body>
 </html>
